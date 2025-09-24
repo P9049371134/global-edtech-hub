@@ -142,25 +142,30 @@ export const seedTestData = mutation({
       sessionId: sessionId1,
       userId: studentId1,
       title: "Quadratic Formula Notes",
-      content: "The quadratic formula is x = (-b ± √(b²-4ac)) / 2a. This formula helps solve any quadratic equation of the form ax² + bx + c = 0. Key points: discriminant determines number of solutions, vertex form is useful for graphing.",
-      summary: "Quadratic formula derivation and applications for solving second-degree equations",
+      content:
+        "The quadratic formula is x = (-b ± √(b²-4ac)) / 2a. This formula helps solve any quadratic equation of the form ax² + bx + c = 0. Key points: discriminant determines number of solutions, vertex form is useful for graphing.",
+      summary:
+        "Quadratic formula derivation and applications for solving second-degree equations",
       keyPoints: [
         "Quadratic formula: x = (-b ± √(b²-4ac)) / 2a",
         "Discriminant b²-4ac determines solution types",
-        "Vertex form useful for graphing parabolas"
+        "Vertex form useful for graphing parabolas",
       ],
       language: "English",
       isAiGenerated: true,
       confidence: 0.92,
+      createdAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
     });
 
     await ctx.db.insert("notes", {
       sessionId: sessionId1,
       userId: studentId2,
       title: "Mis Notas de Ecuaciones Cuadráticas",
-      content: "La fórmula cuadrática es muy importante para resolver ecuaciones de segundo grado. Necesito practicar más con los problemas de aplicación.",
+      content:
+        "La fórmula cuadrática es muy importante para resolver ecuaciones de segundo grado. Necesito practicar más con los problemas de aplicación.",
       language: "Spanish",
       isAiGenerated: false,
+      createdAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
     });
 
     // Create test translations

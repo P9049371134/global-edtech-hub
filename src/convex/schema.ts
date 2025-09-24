@@ -111,10 +111,12 @@ const schema = defineSchema(
       language: v.string(),
       isAiGenerated: v.boolean(),
       confidence: v.optional(v.number()), // AI confidence score
+      createdAt: v.number(),
     })
       .index("by_session", ["sessionId"])
       .index("by_user", ["userId"])
-      .index("by_session_and_user", ["sessionId", "userId"]),
+      .index("by_session_and_user", ["sessionId", "userId"])
+      .index("by_user_and_createdAt", ["userId", "createdAt"]),
 
     // Translations
     translations: defineTable({

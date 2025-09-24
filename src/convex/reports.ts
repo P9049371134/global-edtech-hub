@@ -53,16 +53,16 @@ export const generateReport = mutation({
     const averageSessionDuration = attendanceRecords.length > 0 ? 
       totalDuration / attendanceRecords.length : 0;
 
-    // Count notes
-    const notes = await ctx.db
+    // Count notes in time window using index
+    const notesInPeriod = await ctx.db
       .query("notes")
-      .withIndex("by_user", (q) => q.eq("userId", targetStudentId))
+      .withIndex("by_user_and_createdAt", (q) =>
+        q
+          .eq("userId", targetStudentId)
+          .gte("createdAt", args.startDate)
+          .lte("createdAt", args.endDate),
+      )
       .collect();
-
-    const notesInPeriod = notes.filter(note => {
-      // We'd need to add timestamp to notes schema for this to work properly
-      return true; // Simplified for now
-    });
 
     // Generate insights
     const strengths = [];

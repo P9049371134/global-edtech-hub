@@ -34,6 +34,7 @@ export const createNote = mutation({
       ...args,
       userId: user._id,
       isAiGenerated: false,
+      createdAt: Date.now(),
     });
   },
 });

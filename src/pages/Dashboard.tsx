@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 
 export default function Dashboard() {
   const { user, isLoading } = useAuth();
@@ -388,6 +389,37 @@ export default function Dashboard() {
                 </Card>
               ))}
             </div>
+
+            {/* Tiny chart: Attendance over time */}
+            <Card className="border-orange-100">
+              <CardHeader>
+                <CardTitle className="text-lg">Attendance Trend</CardTitle>
+                <CardDescription>Recent report attendance rates</CardDescription>
+              </CardHeader>
+              <CardContent className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={(userReports ?? [])
+                      .slice()
+                      .reverse()
+                      .map((r) => ({
+                        date: new Date(r.endDate).toLocaleDateString(),
+                        attendance: Math.round(r.attendanceRate),
+                      }))}>
+                    <defs>
+                      <linearGradient id="colorAttend" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#fb923c" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#fb923c" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="attendance" stroke="#fb923c" fillOpacity={1} fill="url(#colorAttend)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
