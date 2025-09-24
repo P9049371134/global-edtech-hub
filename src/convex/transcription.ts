@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getCurrentUser } from "./users";
 
 // Schema-side types (kept minimal here)
 // chunks: { ts: number; text: string; translated?: string }
@@ -25,10 +24,9 @@ export const start = mutation({
   },
 });
 
-// Public: no-op append; guarded on client to only call if live transcript exists (it won't)
+/* Fix: correct transcriptId types to point to the transcripts table */
 export const appendChunk = mutation({
-  // Use an existing table id type; will never be called since getLiveForSession returns null
-  args: { transcriptId: v.id("sessions"), text: v.string() },
+  args: { transcriptId: v.id("transcripts"), text: v.string() },
   handler: async (ctx, args) => {
     // No-op for now
   },
@@ -36,7 +34,7 @@ export const appendChunk = mutation({
 
 // Public: no-op stop
 export const stop = mutation({
-  args: { transcriptId: v.id("sessions") },
+  args: { transcriptId: v.id("transcripts") },
   handler: async (ctx, args) => {
     // No-op for now
   },
@@ -44,25 +42,26 @@ export const stop = mutation({
 
 // Public: no-op set target language
 export const setTargetLanguage = mutation({
-  args: { transcriptId: v.id("sessions"), targetLanguage: v.string() },
+  args: { transcriptId: v.id("transcripts"), targetLanguage: v.string() },
   handler: async (ctx, args) => {
     // No-op for now
   },
 });
 
 export const getById = query({
-  // Accept a string id to avoid referencing a missing table type
-  args: { transcriptId: v.string() },
+  args: { transcriptId: v.id("transcripts") },
   handler: async (ctx, args) => {
-    // No server transcript storage yet
-    return null;
+    return await ctx.db.get(args.transcriptId);
   },
 });
 
 export const listForSession = query({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
-    // No server transcript storage yet
-    return [];
+    return await ctx.db
+      .query("transcripts")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .order("desc")
+      .collect();
   },
 });

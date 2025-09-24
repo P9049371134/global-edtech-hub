@@ -117,6 +117,11 @@ export const exchangeCodeAndStore = internalAction({
     } catch {
       throw new Error("Invalid state");
     }
+    // Add strict validation for userId presence to avoid invalid Id errors later
+    if (!userId || typeof userId !== "string" || userId.trim().length === 0) {
+      throw new Error("Invalid state: missing userId");
+    }
+
     const tokenResp = await fetchToken(args.code);
     const providerUserId = tokenResp.id_token ? parseIdTokenSub(tokenResp.id_token) : "google-user";
     const accessEnc = encrypt(tokenResp.access_token);
