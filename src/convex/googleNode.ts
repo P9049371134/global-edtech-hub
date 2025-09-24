@@ -1,3 +1,4 @@
+/// <reference types="node" />
 "use node";
 
 import { internalAction } from "./_generated/server";
@@ -106,10 +107,10 @@ export const saveOAuthTokens = internalAction({
 });
 
 // Action: ensure valid access token for a user (refresh if needed)
-export const ensureAccessTokenForUser: any = internalAction({
+export const ensureAccessTokenForUser = internalAction({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const token: any = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: args.userId });
+    const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: args.userId });
     if (!token) {
       return { access: "", ok: false as const };
     }

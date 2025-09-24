@@ -1,11 +1,18 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import * as React from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type Session = any;
 
@@ -24,6 +31,7 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
   const { user } = useAuth();
 
   const addVideo = useMutation(api.videos.addToSession);
+  // removed unused listVideos helper
 
   const openAttach = (sessionId: string) => {
     setTargetSession(sessionId);
@@ -117,12 +125,12 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {(liveSessions ?? []).map((s: any) => (
-          <SessionItem
+          <SessionCard
             key={s._id}
             session={s}
-            onJoin={() => onJoin(s._id)}
-            onSchedule={() => openSchedule(s._id)}
-            onAttach={() => openAttach(s._id)}
+            onJoin={onJoin}
+            onAttach={openAttach}
+            onSchedule={openSchedule}
           />
         ))}
       </div>
@@ -202,18 +210,18 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
   );
 }
 
-// Add: Child component to safely use hooks per session card
-function SessionItem({
+function SessionCard({
   session,
   onJoin,
-  onSchedule,
   onAttach,
+  onSchedule,
 }: {
   session: any;
-  onJoin: () => void;
-  onSchedule: () => void;
-  onAttach: () => void;
+  onJoin: (sessionId: string) => void;
+  onAttach: (sessionId: string) => void;
+  onSchedule: (sessionId: string) => void;
 }) {
+  // Per-session queries (valid, top-level in a component)
   const videos = useQuery(api.videos.listForSession, { sessionId: session._id as any } as any);
   const meeting = useQuery(api.meetings.getForSession, { sessionId: session._id as any } as any);
 
@@ -229,7 +237,7 @@ function SessionItem({
         <div className="flex gap-2">
           <button
             className="text-sm px-3 py-1 rounded-md border border-green-200 text-green-700 hover:bg-green-50"
-            onClick={onJoin}
+            onClick={() => onJoin(session._id)}
           >
             Join
           </button>
@@ -245,14 +253,14 @@ function SessionItem({
           ) : (
             <button
               className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
-              onClick={onSchedule}
+              onClick={() => onSchedule(session._id)}
             >
               Schedule Meet
             </button>
           )}
           <button
             className="text-sm px-3 py-1 rounded-md border border-purple-200 text-purple-700 hover:bg-purple-50"
-            onClick={onAttach}
+            onClick={() => onAttach(session._id)}
           >
             Attach YouTube
           </button>
