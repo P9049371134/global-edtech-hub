@@ -195,4 +195,53 @@ http.route({
   }),
 });
 
+// ADD: Transcript TXT export route
+http.route({
+  path: "/api/transcripts/:id.txt",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const id = url.pathname.split("/").pop();
+    if (!id) return new Response("Missing id", { status: 400 });
+
+    try {
+      // v.id can't be used directly with string, rely on query to fetch by id via system
+      // We expose an internal query via API-like shape: query by id through DB
+      // But since we don't have a direct function, emulate via system.get id parsing
+      // Simpler: add a small lookup using runQuery over getById-like function (from new module)
+      const { internal } = await import("./_generated/api");
+      // call through internal is not available for public query; rely on public shape
+      // However, we can register a public query in transcription.ts (getById) and call it here
+      const result = (await ctx.runQuery(
+        // @ts-ignore path inference
+        (await import("./_generated/api")).api.transcription.getById,
+        // @ts-ignore validator casting at runtime
+        { transcriptId: id as any }
+      )) as any;
+
+      if (!result) return new Response("Not found", { status: 404 });
+
+      const lines = (Array.isArray(result.chunks) ? result.chunks : []) as Array<any>;
+      const joinTxt = lines
+        .map((c) => {
+          const time = new Date(c.ts).toISOString();
+          const base = `[${time}] ${c.text}`;
+          if (c.translated) return `${base}\n[translated] ${c.translated}`;
+          return base;
+        })
+        .join("\n");
+
+      return new Response(joinTxt, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      });
+    } catch (e: any) {
+      return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 });
+    }
+  }),
+});
+
 export default http;

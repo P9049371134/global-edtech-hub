@@ -229,6 +229,27 @@ const schema = defineSchema(
       .index("by_session", ["sessionId"])
       .index("by_classroom", ["classroomId"]),
 
+    // ADD: transcripts table with proper indexes
+    transcripts: defineTable({
+      sessionId: v.id("sessions"),
+      createdBy: v.id("users"),
+      sourceLanguage: v.string(),
+      targetLanguage: v.optional(v.string()),
+      isLive: v.boolean(),
+      chunks: v.array(
+        v.object({
+          ts: v.number(),
+          text: v.string(),
+          translated: v.optional(v.string()),
+        })
+      ),
+      createdAt: v.number(),
+      endedAt: v.optional(v.number()),
+    })
+      .index("by_session", ["sessionId"])
+      .index("by_session_and_live", ["sessionId", "isLive"])
+      .index("by_user", ["createdBy"]),
+
     // ADD: tokens table + index by user and provider
     tokens: defineTable({
       userId: v.id("users"),

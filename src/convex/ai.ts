@@ -65,3 +65,56 @@ ${note.content}
     });
   },
 });
+
+// Add a public action to translate arbitrary text using OpenRouter
+import { action } from "./_generated/server";
+import { v } from "convex/values"; // ensure v is available for args
+
+export const translateText = action({
+  args: {
+    text: v.string(),
+    targetLang: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing OPENROUTER_API_KEY");
+    }
+
+    const prompt = `Translate the following text into ${args.targetLang}. Keep meaning and tone, return only the translated text without any extra commentary:
+
+${args.text}`;
+
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://global-edtech-hub.local",
+        "X-Title": "Global EdTech Hub",
+      },
+      body: JSON.stringify({
+        model: "openrouter/auto",
+        messages: [
+          { role: "system", content: "You are a professional translator." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.2,
+      }),
+    });
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`OpenRouter translation failed: ${t || res.statusText}`);
+    }
+    const data = await res.json().catch(() => null);
+    const translated: string =
+      data?.choices?.[0]?.message?.content?.trim?.() ?? "";
+
+    if (!translated) {
+      throw new Error("Empty translation result");
+    }
+
+    return { translated };
+  },
+});

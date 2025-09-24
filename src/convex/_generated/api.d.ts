@@ -34,6 +34,7 @@ import type * as reports from "../reports.js";
 import type * as sessions from "../sessions.js";
 import type * as system from "../system.js";
 import type * as testData from "../testData.js";
+import type * as transcription from "../transcription.js";
 import type * as users from "../users.js";
 import type * as videos from "../videos.js";
 
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   sessions: typeof sessions;
   system: typeof system;
   testData: typeof testData;
+  transcription: typeof transcription;
   users: typeof users;
   videos: typeof videos;
 }>;

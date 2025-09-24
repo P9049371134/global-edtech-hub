@@ -249,44 +249,45 @@ function SessionCard({
     return SR;
   };
 
-  const initRecognition = React.useCallback(() => {
-    const SR = getSpeechRecognition();
-    if (!SR) return null;
-    const rec = new SR();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = lang;
-    rec.onresult = (event: any) => {
-      let finalText = "";
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const chunk = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalText += chunk + " ";
-        } else {
-          interim += chunk;
-        }
-      }
-      setTranscript((prev) => (finalText ? `${prev}${finalText}` : prev));
-      // Optionally show interim visually in future; keep minimal for now
-    };
-    rec.onerror = (e: any) => {
-      toast.error(`Transcription error: ${e?.error ?? "unknown"}`);
-      setIsRecording(false);
-    };
-    rec.onend = () => {
-      setIsRecording(false);
-    };
-    return rec;
-  }, [lang]);
+  // Server-backed live transcript
+  const liveTranscript = useQuery(api.transcription.getLiveForSession, { sessionId: session._id as any } as any);
+  const startServerTranscript = useMutation(api.transcription.start);
+  const appendChunk = useMutation(api.transcription.appendChunk);
+  const stopServerTranscript = useMutation(api.transcription.stop);
+  const setTargetLanguage = useMutation(api.transcription.setTargetLanguage);
 
-  const startRec = () => {
+  // Track selected target language (server)
+  const [targetLang, setTargetLang] = React.useState<string | "">(liveTranscript?.targetLanguage ?? "");
+
+  React.useEffect(() => {
+    setTargetLang(liveTranscript?.targetLanguage ?? "");
+  }, [liveTranscript?.targetLanguage]);
+
+  const ensureServerTranscript = async () => {
+    if (liveTranscript?._id) return liveTranscript._id as string;
+    // Start a server transcript using current recognition language as source
+    const id = await startServerTranscript({
+      sessionId: session._id as any,
+      sourceLanguage: lang,
+      ...(targetLang ? { targetLanguage: targetLang } : {}),
+    } as any);
+    return id as unknown as string;
+  };
+
+  // Augment start/stop to also manage server transcript
+  const startRec = async () => {
     const SR = getSpeechRecognition();
     if (!SR) {
       toast.error("Live transcription not supported in this browser.");
       return;
     }
     if (isRecording) return;
+    // ensure server transcript
+    try {
+      await ensureServerTranscript();
+    } catch (e) {
+      // non-blocking UI
+    }
     const rec = initRecognition();
     if (!rec) {
       toast.error("Could not start transcription.");
@@ -302,14 +303,68 @@ function SessionCard({
     }
   };
 
-  const stopRec = () => {
+  const stopRec = async () => {
     if (!isRecording) return;
     try {
       recognitionRef.current?.stop();
       setIsRecording(false);
+      // stop server transcript if exists
+      if (liveTranscript?._id) {
+        stopServerTranscript({ transcriptId: liveTranscript._id as any }).catch(() => {});
+      }
       toast("Transcription stopped");
     } catch {
       // ignore
+    }
+  };
+
+  // Hook server append on final results
+  const initRecognition = React.useCallback(() => {
+    const SR = getSpeechRecognition();
+    if (!SR) return null;
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = lang;
+    rec.onresult = async (event: any) => {
+      let finalText = "";
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const chunk = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += chunk + " ";
+        } else {
+          interim += chunk;
+        }
+      }
+      if (finalText) {
+        setTranscript((prev) => `${prev}${finalText}`);
+        // push to server
+        try {
+          const tid = await ensureServerTranscript();
+          await appendChunk({ transcriptId: tid as any, text: finalText.trim() } as any);
+        } catch {
+          // ignore to keep client UI smooth
+        }
+      }
+    };
+    rec.onerror = (e: any) => {
+      toast.error(`Transcription error: ${e?.error ?? "unknown"}`);
+      setIsRecording(false);
+    };
+    rec.onend = () => {
+      setIsRecording(false);
+    };
+    return rec;
+  }, [lang]); // eslint-disable-line
+
+  // Update server target language when changed
+  const onChangeTargetLang = async (val: string) => {
+    setTargetLang(val);
+    if (liveTranscript?._id) {
+      setTargetLanguage({ transcriptId: liveTranscript._id as any, targetLanguage: val || null } as any).catch(() => {});
+    } else {
+      // if not live yet, it will apply once started
     }
   };
 
@@ -402,29 +457,18 @@ function SessionCard({
                   </option>
                 ))}
               </select>
-              <div className="flex gap-2 mt-1 sm:mt-0">
-                {!isRecording ? (
-                  <button
-                    className="text-sm px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-gray-900"
-                    onClick={startRec}
-                  >
-                    Start
-                  </button>
-                ) : (
-                  <button
-                    className="text-sm px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700"
-                    onClick={stopRec}
-                  >
-                    Stop
-                  </button>
-                )}
-                <button
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 text-gray-800 hover:bg-white"
-                  onClick={downloadTxt}
-                  disabled={!transcript.trim()}
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-gray-700">Translate to</div>
+                <select
+                  className="text-sm border rounded px-2 py-1 bg-white"
+                  value={targetLang}
+                  onChange={(e) => onChangeTargetLang(e.target.value)}
                 >
-                  Download .txt
-                </button>
+                  <option value="">Off</option>
+                  {LANGS.map((l) => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="h-40 overflow-auto rounded border bg-white p-2 text-sm leading-6">
@@ -434,6 +478,45 @@ function SessionCard({
                 <div className="text-gray-400">No transcript yet. Click "Start" to begin.</div>
               )}
             </div>
+          </div>
+          <div className="flex gap-2 mt-2">
+            {!isRecording ? (
+              <button
+                className="text-sm px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-gray-900"
+                onClick={startRec}
+              >
+                Start
+              </button>
+            ) : (
+              <button
+                className="text-sm px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700"
+                onClick={stopRec}
+              >
+                Stop
+              </button>
+            )}
+            <button
+              className="text-sm px-3 py-1 rounded-md border border-gray-300 text-gray-800 hover:bg-white"
+              onClick={downloadTxt}
+              disabled={!transcript.trim()}
+            >
+              Download .txt
+            </button>
+            {liveTranscript?._id && (
+              <button
+                className="text-sm px-3 py-1 rounded-md border border-blue-300 text-blue-700 hover:bg-blue-100"
+                onClick={() => {
+                  if (liveTranscript?.targetLanguage) {
+                    toast.info(`Translating to ${liveTranscript.targetLanguage}...`);
+                  } else {
+                    toast.info("No translation target set.");
+                  }
+                }}
+                disabled={!liveTranscript?.targetLanguage}
+              >
+                Export .txt
+              </button>
+            )}
           </div>
         </div>
       )}
