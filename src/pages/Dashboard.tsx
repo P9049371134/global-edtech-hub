@@ -30,6 +30,10 @@ import { ClassroomsTab } from "@/components/dashboard/ClassroomsTab";
 import { SessionsTab } from "@/components/dashboard/SessionsTab";
 import { NotesTab } from "@/components/dashboard/NotesTab";
 import { ReportsTab } from "@/components/dashboard/ReportsTab";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function Dashboard() {
   const { user, isLoading } = useAuth();
@@ -54,6 +58,17 @@ export default function Dashboard() {
   const sendEmails = useAction(api.notifications.sendSessionStartEmails);
   const summarize = useMutation(api.notes.generateNoteSummary);
   const joinSession = useMutation(api.sessions.joinSession);
+  const createClassroom = useMutation(api.classrooms.createClassroom);
+
+  // Add: create classroom modal state
+  const [openCreate, setOpenCreate] = React.useState(false);
+  const [cName, setCName] = React.useState("");
+  const [cSubject, setCSubject] = React.useState("");
+  const [cLanguage, setCLanguage] = React.useState("English");
+  const [cGrade, setCGrade] = React.useState("");
+  const [cMax, setCMax] = React.useState<string>("");
+  const [cAllowTranslate, setCAllowTranslate] = React.useState(true);
+  const [creating, setCreating] = React.useState(false);
 
   if (isLoading) {
     return (
@@ -86,6 +101,37 @@ export default function Dashboard() {
         .catch(() => {});
     } catch (error) {
       toast.error("Failed to start session");
+    }
+  };
+
+  // Add: submit create classroom
+  const submitCreateClassroom = async () => {
+    if (!cName.trim() || !cSubject.trim() || !cLanguage.trim()) {
+      toast.error("Please fill in Name, Subject, and Language");
+      return;
+    }
+    setCreating(true);
+    try {
+      await createClassroom({
+        name: cName.trim(),
+        subject: cSubject.trim(),
+        language: cLanguage.trim(),
+        allowTranslation: cAllowTranslate,
+        ...(cGrade.trim() ? { grade: cGrade.trim() } : {}),
+        ...(cMax.trim() ? { maxStudents: Number(cMax) } : {}),
+      } as any);
+      toast.success("Classroom created");
+      setOpenCreate(false);
+      setCName("");
+      setCSubject("");
+      setCLanguage("English");
+      setCGrade("");
+      setCMax("");
+      setCAllowTranslate(true);
+    } catch {
+      toast.error("Failed to create classroom");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -154,10 +200,64 @@ export default function Dashboard() {
               classrooms={classrooms}
               availableClassrooms={availableClassrooms}
               isTeacher={isTeacher}
-              onCreateClassroom={() => navigate("/create-classroom")}
+              onCreateClassroom={() => setOpenCreate(true)}
               onStartSession={handleStartSession}
               onEnroll={handleEnroll}
             />
+
+            {/* Create Classroom Dialog */}
+            <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create Classroom</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="cname">Name</Label>
+                    <Input id="cname" value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Algebra 101" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="csubject">Subject</Label>
+                    <Input id="csubject" value={cSubject} onChange={(e) => setCSubject(e.target.value)} placeholder="Mathematics" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="clanguage">Language</Label>
+                      <Input id="clanguage" value={cLanguage} onChange={(e) => setCLanguage(e.target.value)} placeholder="English" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cgrade">Grade (optional)</Label>
+                      <Input id="cgrade" value={cGrade} onChange={(e) => setCGrade(e.target.value)} placeholder="Grade 8" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cmax">Max Students (optional)</Label>
+                      <Input
+                        id="cmax"
+                        type="number"
+                        min={1}
+                        value={cMax}
+                        onChange={(e) => setCMax(e.target.value)}
+                        placeholder="30"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between pt-6">
+                      <Label htmlFor="ctranslate" className="mr-4">Allow Translation</Label>
+                      <Switch id="ctranslate" checked={cAllowTranslate} onCheckedChange={setCAllowTranslate} />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpenCreate(false)} disabled={creating}>
+                    Cancel
+                  </Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700" onClick={submitCreateClassroom} disabled={creating}>
+                    {creating ? "Creating..." : "Create"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="sessions" className="space-y-6">
