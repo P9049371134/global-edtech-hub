@@ -1,5 +1,5 @@
 // Add Node runtime so we can use node:crypto and external fetches
-"use node";
+/* Node runtime is implied for httpAction; no directive needed */
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -68,7 +68,7 @@ function buildGoogleAuthUrl(userId: string) {
   const state = Buffer.from(
     JSON.stringify({ userId, nonce: crypto.randomBytes(8).toString("hex"), ts: Date.now() }),
     "utf8"
-  ).toString("base64url");
+  ).toString("base64");
   params.set("state", state);
   return `${base}?${params.toString()}`;
 }
@@ -134,7 +134,7 @@ http.route({
     if (!code || !state) return new Response("Missing params", { status: 400 });
     let userId: string | null = null;
     try {
-      const { userId: uid } = JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
+      const { userId: uid } = JSON.parse(Buffer.from(state, "base64").toString("utf8"));
       userId = uid;
     } catch {
       return new Response("Invalid state", { status: 400 });
@@ -246,7 +246,7 @@ http.route({
     const { userId, sessionId, title, start, end } = body || {};
     if (!userId || !sessionId || !title || !start || !end)
       return new Response("Missing fields", { status: 400 });
-    const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId });
+    const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: userId as any });
     if (!token) return new Response(JSON.stringify({ error: "not connected" }), { status: 403 });
     const { access } = await ensureAccessToken(ctx, token);
     const event = {

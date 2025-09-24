@@ -239,8 +239,7 @@ const schema = defineSchema(
       expiresAt: v.number(),
       scopes: v.optional(v.array(v.string())),
       updatedAt: v.number(),
-    })
-      .index("by_user_and_provider", ["userId", "provider"])
+    }).index("by_user_and_provider", ["userId", "provider"])
       .index("by_provider", ["provider"]),
 
     // ADD: classrooms_external table
