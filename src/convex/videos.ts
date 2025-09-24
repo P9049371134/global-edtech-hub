@@ -37,23 +37,6 @@ export const listForSession = query({
   },
 });
 
-// Add: list videos for many sessions in one call to avoid multiple hooks on the client
-export const listForSessions = query({
-  args: { sessionIds: v.array(v.id("sessions")) },
-  handler: async (ctx, args) => {
-    const map: Record<string, any[]> = {};
-    for (const id of args.sessionIds) {
-      const rows = await ctx.db
-        .query("videos")
-        .withIndex("by_session", (q) => q.eq("sessionId", id))
-        .order("desc")
-        .collect();
-      map[id as any] = rows;
-    }
-    return map;
-  },
-});
-
 // Attach a YouTube video to a session (teacher or admin only)
 export const addToSession = mutation({
   args: {
@@ -75,7 +58,6 @@ export const addToSession = mutation({
     const videoId = extractYouTubeId(args.urlOrId);
     if (!videoId) throw new Error("Invalid YouTube URL or ID");
 
-    const title = args.title ?? undefined;
     const now = Date.now();
 
     // Idempotent-ish: avoid duplicates for same session + videoId
@@ -88,15 +70,17 @@ export const addToSession = mutation({
       return null;
     }
 
-    await ctx.db.insert("videos", {
+    const doc: any = {
       provider: "youtube",
       videoId,
-      title,
       sessionId: args.sessionId,
-      classroomId: undefined,
       addedBy: me._id,
       addedAt: now,
-    });
+    };
+    if (args.title && args.title.trim()) {
+      doc.title = args.title.trim();
+    }
+    await ctx.db.insert("videos", doc);
 
     return null;
   },

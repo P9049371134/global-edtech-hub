@@ -1,5 +1,4 @@
 import { query } from "./_generated/server";
-import { v } from "convex/values";
 
 export const getStatus = query({
   args: {},
@@ -22,8 +21,10 @@ export const getStatus = query({
 
     // New: check stored token existence
     let googleConnected = false;
-    // Query a small sample without invalid index usage
-    const anyToken = await ctx.db.query("tokens").take(1);
+    // Take 1 document from tokens (small scan), then filter by provider
+    const anyToken = await ctx.db
+      .query("tokens")
+      .take(1);
     googleConnected = anyToken.some((t: any) => t.provider === "google");
 
     return {

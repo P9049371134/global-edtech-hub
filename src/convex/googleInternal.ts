@@ -81,21 +81,27 @@ export const upsertExternalClassroom = internalMutation({
       .unique();
     const now = Date.now();
     if (existing) {
-      await ctx.db.patch(existing._id, {
+      const patch: any = {
         provider: "google",
         title: args.title,
-        description: args.description,
         syncedAt: now,
-      });
+      };
+      if (args.description !== undefined) {
+        patch.description = args.description;
+      }
+      await ctx.db.patch(existing._id, patch);
       return existing._id;
     }
-    const id = await ctx.db.insert("classrooms_external", {
+    const doc: any = {
       provider: "google",
       providerCourseId: args.providerCourseId,
       title: args.title,
-      description: args.description,
       syncedAt: now,
-    });
+    };
+    if (args.description !== undefined) {
+      doc.description = args.description;
+    }
+    const id = await ctx.db.insert("classrooms_external", doc);
     return id;
   },
 });
