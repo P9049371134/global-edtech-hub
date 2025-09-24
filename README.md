@@ -29,8 +29,37 @@ The convex server has a separate set of environment variables that are accessibl
 
 Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
 
+# Global EdTech Hub
 
-# Using Authentication (Important!)
+A virtual learning platform with real-time collaboration, AI-ready notes, and performance reporting (Convex + React + Tailwind).
+
+## How to run locally
+
+1. Install dependencies:
+   - pnpm install
+
+2. Start Convex + Vite dev:
+   - pnpm dev
+
+3. Open in browser:
+   - http://localhost:5173
+
+## Demo Page
+
+Visit /demo for a minimal, demo-ready skeleton of:
+- Translate (mocked)
+- Summarize (mocked)
+- Reports (placeholder chart)
+
+## Optional Integrations
+
+Set API keys via Integrations tab:
+- OPENROUTER_API_KEY (AI summaries)
+- RESEND_API_KEY (session start emails)
+
+The Admin page (/admin) shows their status.
+
+## Using Authentication (Important!)
 
 You must follow these conventions when using authentication.
 

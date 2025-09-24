@@ -18,6 +18,7 @@ import type * as aiInternal from "../aiInternal.js";
 import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth from "../auth.js";
 import type * as classrooms from "../classrooms.js";
+import type * as demo from "../demo.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as notes from "../notes.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   "auth/emailOtp": typeof auth_emailOtp;
   auth: typeof auth;
   classrooms: typeof classrooms;
+  demo: typeof demo;
   http: typeof http;
   messages: typeof messages;
   notes: typeof notes;
