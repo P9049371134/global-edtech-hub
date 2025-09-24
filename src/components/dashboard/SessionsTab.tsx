@@ -24,7 +24,9 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
   const { user } = useAuth();
 
   const addVideo = useMutation(api.videos.addToSession);
-  // removed unused listVideos and listMeeting
+   // removed unused listVideos
+
+  // removed unused listMeeting
 
   const openAttach = (sessionId: string) => {
     setTargetSession(sessionId);
