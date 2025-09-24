@@ -1,5 +1,7 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
+import { useState } from "react";
 import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   session: any;
@@ -11,6 +13,7 @@ type Props = {
 export function SessionCard({ session: s, onJoin, onOpenAttach, onOpenSchedule }: Props) {
   const videos = useQuery(api.videos.listForSession, { sessionId: s._id as any } as any);
   const meeting = useQuery(api.meetings.getForSession, { sessionId: s._id as any } as any);
+  const joinSession = useMutation(api.sessions.joinSession as any);
 
   return (
     <div className="border rounded-md p-4 bg-white border-green-100">
@@ -22,12 +25,29 @@ export function SessionCard({ session: s, onJoin, onOpenAttach, onOpenSchedule }
           </div>
         </div>
         <div className="flex gap-2">
-          <button
-            className="text-sm px-3 py-1 rounded-md border border-green-200 text-green-700 hover:bg-green-50"
-            onClick={() => onJoin(s._id)}
-          >
-            Join
-          </button>
+          {meeting?.providerMeetingUrl ? (
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={async () => {
+                try {
+                  await joinSession({ sessionId: s._id });
+                } catch {
+                  // Non-blocking; continue to open Meet even if attendance call fails
+                } finally {
+                  window.open(meeting.providerMeetingUrl, "_blank", "noopener,noreferrer");
+                }
+              }}
+            >
+              Join Google Meet
+            </Button>
+          ) : (
+            <button
+              className="text-sm px-3 py-1 rounded-md border border-green-200 text-green-700 hover:bg-green-50"
+              onClick={() => onJoin(s._id)}
+            >
+              Join
+            </button>
+          )}
           {meeting?.providerMeetingUrl ? (
             <a
               href={meeting.providerMeetingUrl}
