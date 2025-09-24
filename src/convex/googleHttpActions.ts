@@ -6,7 +6,7 @@ import { v } from "convex/values";
 import * as crypto from "node:crypto";
 
 // Helpers: encryption using TOKEN_ENCRYPTION_KEY (hex or base64, 32 bytes)
-function getKey(): Buffer {
+function getKey() {
   const raw = process.env.TOKEN_ENCRYPTION_KEY || "";
   if (!raw) throw new Error("Missing TOKEN_ENCRYPTION_KEY");
   if (/^[0-9a-fA-F]+$/.test(raw) && raw.length === 64) {

@@ -6,7 +6,7 @@ import * as crypto from "node:crypto";
 import { v } from "convex/values";
 
 // Helpers: encryption using TOKEN_ENCRYPTION_KEY (hex or base64, 32 bytes)
-function getKey(): Buffer {
+function getKey() {
   const raw = process.env.TOKEN_ENCRYPTION_KEY || "";
   if (!raw) throw new Error("Missing TOKEN_ENCRYPTION_KEY");
   if (/^[0-9a-fA-F]+$/.test(raw) && raw.length === 64) {
@@ -52,16 +52,11 @@ function parseIdTokenSub(id_token: string): string | null {
 
 // Exchange OAuth code and store encrypted tokens
 export const exchangeOAuthCode = internalAction({
-  args: { code: v.string(), state: v.string() },
+  args: { code: v.string(), stateB64: v.string() },
   handler: async (ctx, args) => {
-    let userId: string | undefined;
-    try {
-      const decoded = decodeURIComponent(args.state);
-      const parsed = JSON.parse(decoded) as { userId?: string };
-      userId = parsed.userId;
-    } catch {
-      throw new Error("Invalid state");
-    }
+    // add narrow type to parsed state to satisfy TS
+    const state = JSON.parse(Buffer.from(args.stateB64, "base64").toString("utf8")) as { userId?: string };
+    const userId: string | undefined = state?.userId;
     if (!userId) throw new Error("Missing userId in state");
 
     const body = new URLSearchParams();
