@@ -1,6 +1,6 @@
-// Add Node runtime directive required for httpAction + crypto usage
-/* Node runtime is implied for httpAction; directive not allowed here */
-/** Using Node APIs (crypto) inside httpAction handlers is supported without a directive */
+// Add the Node runtime directive so Node APIs like 'crypto' work and Convex can register HTTP actions
+"use node";
+
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -8,7 +8,7 @@ import { internal } from "./_generated/api";
 const http = httpRouter();
 
 // Crypto helpers (AES-256-GCM)
-import * as crypto from "node:crypto";
+import crypto from "node:crypto";
 
 // Helpers: encryption using TOKEN_ENCRYPTION_KEY (hex expected, 32 bytes)
 function getKey(): Buffer {
@@ -69,7 +69,7 @@ function buildGoogleAuthUrl(userId: string) {
   const state = Buffer.from(
     JSON.stringify({ userId, nonce: crypto.randomBytes(8).toString("hex"), ts: Date.now() }),
     "utf8"
-  ).toString("base64");
+  ).toString("base64url");
   params.set("state", state);
   return `${base}?${params.toString()}`;
 }
@@ -135,7 +135,7 @@ http.route({
     if (!code || !state) return new Response("Missing params", { status: 400 });
     let userId: string | null = null;
     try {
-      const { userId: uid } = JSON.parse(Buffer.from(state, "base64").toString("utf8"));
+      const { userId: uid } = JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
       userId = uid;
     } catch {
       return new Response("Invalid state", { status: 400 });
@@ -280,9 +280,9 @@ http.route({
       provider: "google",
       providerMeetingId: data.id,
       providerMeetingUrl: meetUrl,
-      sessionId,
+      sessionId: sessionId as any,
       scheduledAt: new Date(start).getTime(),
-      createdBy: userId,
+      createdBy: userId as any,
     });
     return new Response(JSON.stringify({ meetUrl, eventId: data.id }), {
       status: 200,
