@@ -2,12 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import * as React from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { Label } from "@/components/ui/label";
 
 type Session = any;
 
@@ -23,9 +25,15 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
   const [url, setUrl] = React.useState("");
   const [title, setTitle] = React.useState("");
 
+  const { user } = useAuth();
+
   const addVideo = useMutation(api.videos.addToSession);
   const listVideos = (sessionId: string) =>
     useQuery(api.videos.listForSession, { sessionId: sessionId as any } as any);
+
+  // Add: meeting getter per session
+  const listMeeting = (sessionId: string) =>
+    useQuery(api.meetings.getForSession, { sessionId: sessionId as any } as any);
 
   const openAttach = (sessionId: string) => {
     setTargetSession(sessionId);
@@ -50,15 +58,77 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
     setOpen(false);
   };
 
+  // New: Schedule Meet dialog state
+  const [openMeet, setOpenMeet] = React.useState(false);
+  const [meetSession, setMeetSession] = React.useState<string | null>(null);
+  const [mTitle, setMTitle] = React.useState("");
+  const [mStart, setMStart] = React.useState("");
+  const [mEnd, setMEnd] = React.useState("");
+
+  const openSchedule = (sessionId: string) => {
+    setMeetSession(sessionId);
+    setMTitle("");
+    setMStart("");
+    setMEnd("");
+    setOpenMeet(true);
+  };
+
+  const submitSchedule = async () => {
+    if (!user?._id || !meetSession) return;
+    if (!mTitle.trim() || !mStart || !mEnd) {
+      toast.error("Please fill in title, start, and end");
+      return;
+    }
+    const p = fetch("/api/integrations/google/schedule-meet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user._id,
+        sessionId: meetSession,
+        title: mTitle.trim(),
+        start: mStart,
+        end: mEnd,
+      }),
+    }).then(async (r) => {
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    });
+    toast.promise(p, {
+      loading: "Scheduling Google Meet...",
+      success: "Meet scheduled",
+      error: "Failed to schedule",
+    });
+    try {
+      await p;
+      setOpenMeet(false);
+    } catch {}
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-semibold">Live Sessions</h3>
+        <div className="flex gap-2">
+          {/* Connect Google (OAuth) */}
+          <button
+            className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
+            onClick={() => {
+              if (!user?._id) {
+                toast.error("Sign in first");
+                return;
+              }
+              window.location.href = `/api/integrations/google/start?userId=${user._id}`;
+            }}
+          >
+            Connect Google
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {(liveSessions ?? []).map((s: any) => {
           const videos = listVideos ? listVideos(s._id) : undefined;
+          const meeting = listMeeting ? listMeeting(s._id) : undefined;
           return (
             <div key={s._id} className="border rounded-md p-4 bg-white border-green-100">
               <div className="flex items-center justify-between">
@@ -75,6 +145,23 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
                   >
                     Join
                   </button>
+                  {meeting?.providerMeetingUrl ? (
+                    <a
+                      href={meeting.providerMeetingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
+                    >
+                      Join Google Meet
+                    </a>
+                  ) : (
+                    <button
+                      className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
+                      onClick={() => openSchedule(s._id)}
+                    >
+                      Schedule Meet
+                    </button>
+                  )}
                   <button
                     className="text-sm px-3 py-1 rounded-md border border-purple-200 text-purple-700 hover:bg-purple-50"
                     onClick={() => openAttach(s._id)}
@@ -113,6 +200,7 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Attach YouTube Video</DialogTitle>
+            <DialogDescription>Paste a YouTube URL or the 11-character video ID.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1">
@@ -140,6 +228,40 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
               onClick={submitAttach}
             >
               Attach
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Meet Dialog */}
+      <Dialog open={openMeet} onOpenChange={setOpenMeet}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Schedule Google Meet</DialogTitle>
+            <DialogDescription>Create a Calendar event with a Meet link.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-sm">Title</Label>
+              <Input value={mTitle} onChange={(e) => setMTitle(e.target.value)} placeholder="Session Standup" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-sm">Start</Label>
+                <Input type="datetime-local" value={mStart} onChange={(e) => setMStart(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm">End</Label>
+                <Input type="datetime-local" value={mEnd} onChange={(e) => setMEnd(e.target.value)} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <button className="px-4 py-2 rounded-md border mr-2" onClick={() => setOpenMeet(false)}>
+              Cancel
+            </button>
+            <button className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700" onClick={submitSchedule}>
+              Schedule
             </button>
           </DialogFooter>
         </DialogContent>

@@ -228,6 +228,38 @@ const schema = defineSchema(
     })
       .index("by_session", ["sessionId"])
       .index("by_classroom", ["classroomId"]),
+
+    // ADD: tokens table + index by user and provider
+    tokens: defineTable({
+      userId: v.id("users"),
+      provider: v.string(), // "google"
+      providerUserId: v.string(),
+      accessTokenEncrypted: v.string(),
+      refreshTokenEncrypted: v.string(),
+      expiresAt: v.number(),
+      scopes: v.optional(v.array(v.string())),
+      updatedAt: v.number(),
+    }).index("by_user_and_provider", ["userId", "provider"]),
+
+    // ADD: classrooms_external table
+    classrooms_external: defineTable({
+      provider: v.string(), // "google"
+      providerCourseId: v.string(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      syncedAt: v.optional(v.number()),
+    }).index("by_providerCourseId", ["providerCourseId"]),
+
+    // ADD: meetings_external table
+    meetings_external: defineTable({
+      provider: v.string(), // "google"
+      providerMeetingId: v.optional(v.string()),
+      providerMeetingUrl: v.string(),
+      sessionId: v.id("sessions"),
+      scheduledAt: v.optional(v.number()),
+      createdBy: v.id("users"),
+      createdAt: v.number(),
+    }).index("by_session", ["sessionId"]),
   },
   {
     schemaValidation: false,
