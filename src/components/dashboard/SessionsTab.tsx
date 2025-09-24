@@ -7,9 +7,10 @@ type Session = any;
 
 type Props = {
   liveSessions: Session[] | undefined | null;
+  onJoin: (sessionId: string) => void;
 };
 
-export function SessionsTab({ liveSessions }: Props) {
+export function SessionsTab({ liveSessions, onJoin }: Props) {
   return (
     <div className="space-y-6">
       <h3 className="text-xl font-semibold">Live Sessions</h3>
@@ -31,7 +32,7 @@ export function SessionsTab({ liveSessions }: Props) {
                   <Users className="h-4 w-4" />
                   <span>{session.attendeeCount} attendees</span>
                 </div>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => onJoin(session._id)}>
                   Join Session
                 </Button>
               </div>

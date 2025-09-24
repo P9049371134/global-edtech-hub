@@ -75,11 +75,21 @@ export const joinSession = mutation({
       return existingAttendance._id;
     }
 
-    return await ctx.db.insert("attendance", {
+    // Insert new attendance and increment session attendeeCount
+    const id = await ctx.db.insert("attendance", {
       sessionId: args.sessionId,
       studentId: user._id,
       joinTime: Date.now(),
     });
+
+    const session = await ctx.db.get(args.sessionId);
+    if (session) {
+      await ctx.db.patch(args.sessionId, {
+        attendeeCount: Math.max(0, (session.attendeeCount ?? 0) + 1),
+      });
+    }
+
+    return id;
   },
 });
 
@@ -106,6 +116,14 @@ export const leaveSession = mutation({
         leaveTime,
         duration,
       });
+
+      // Decrement attendeeCount once when a user leaves
+      const session = await ctx.db.get(attendance.sessionId);
+      if (session) {
+        await ctx.db.patch(attendance.sessionId, {
+          attendeeCount: Math.max(0, (session.attendeeCount ?? 0) - 1),
+        });
+      }
     }
   },
 });

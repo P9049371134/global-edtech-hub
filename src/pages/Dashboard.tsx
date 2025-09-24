@@ -53,6 +53,7 @@ export default function Dashboard() {
   const startSession = useMutation(api.sessions.startSession);
   const sendEmails = useAction(api.notifications.sendSessionStartEmails);
   const summarize = useMutation(api.notes.generateNoteSummary);
+  const joinSession = useMutation(api.sessions.joinSession);
 
   if (isLoading) {
     return (
@@ -160,7 +161,17 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="sessions" className="space-y-6">
-            <SessionsTab liveSessions={liveSessions} />
+            <SessionsTab
+              liveSessions={liveSessions}
+              onJoin={async (sessionId: string) => {
+                try {
+                  await joinSession({ sessionId: sessionId as any });
+                  toast.success("Joined session! Attendance recorded.");
+                } catch {
+                  toast.error("Failed to join session");
+                }
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="notes" className="space-y-6">
