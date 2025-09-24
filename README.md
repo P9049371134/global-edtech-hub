@@ -1,3 +1,98 @@
+# Global EdTech Hub
+
+A virtual learning platform with real-time collaboration, AI-ready notes, and performance reporting (Convex + React + Tailwind).
+
+This repository contains the live web app implemented with:
+- React 19 + Vite
+- Tailwind v4 + Shadcn UI
+- Convex (database + backend)
+- Convex Auth (email OTP)
+- Framer Motion (animations)
+- Recharts (charts)
+
+Key features (implemented)
+- Auth: Email OTP, role-aware UI (student, teacher, admin)
+- Dashboard: Classrooms, Live Sessions (real-time attendee counts), Notes (AI summarize), Reports (date filters + trend chart)
+- Admin: Users & roles, classrooms & sessions (start/end), message moderation, integration status
+- Landing: Animated sections, real-time chat & presence
+- Demo: Mock Translate, Summarize, and placeholder Reports chart
+- Integrations (optional): OpenRouter (AI summaries), Resend (session-start email notifications)
+
+Quick start (this app)
+- pnpm install
+- pnpm dev
+- Open http://localhost:5173
+
+Environment variables (via Integrations)
+- OPENROUTER_API_KEY: Enables AI note summaries
+- RESEND_API_KEY: Enables session-start email notifications
+
+Current structure (this app)
+- src/pages: Landing, Auth, Dashboard, Profile, Admin, Demo, NotFound
+- src/components: Shadcn UI + modular dashboard/landing components
+- src/convex: Schema + queries/mutations/actions for users, classrooms, sessions, notes, reports, messages, presence, AI, notifications, system
+
+Monorepo scaffold (if you want web + backend + mobile)
+Note: Create this via the "Sync to GitHub" tab. This environment can't add folders at the repo root, but you can generate the following structure in a new repo (e.g., global-edtech-collab, branch hackathon-mvp), then copy/paste the code stubs:
+
+global-edtech-hub/
+├── README.md
+├── package.json
+├── frontend/                  # Vite React (web)
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/             # Home, Dashboard, Notes
+│   │   ├── services/          # API calls to backend
+│   │   ├── App.js
+│   │   └── index.js
+│   └── package.json
+├── backend/                   # Node.js/Express
+│   ├── src/
+│   │   ├── routes/
+│   │   │   ├── auth.js        # login/signup, role-based
+│   │   │   ├── notes.js       # CRUD for notes
+│   │   │   ├── transcript.js  # STT upload + retrieval
+│   │   │   └── share.js       # generate/share links
+│   │   ├── models/
+│   │   │   ├── User.js
+│   │   │   ├── Note.js
+│   │   │   └── Transcript.js
+│   │   ├── utils/
+│   │   │   ├── ai.js          # OpenAI/Whisper/etc.
+│   │   │   └── stt.js         # speech-to-text integration
+│   │   ├── app.js
+│   │   └── server.js
+│   └── package.json
+├── ai-services/               # Optional Python services
+│   ├── summarizer.py
+│   ├── keywords.py
+│   ├── qna.py
+│   └── requirements.txt
+├── mobile/                    # Expo React Native
+│   ├── App.js
+│   ├── components/
+│   ├── screens/
+│   └── package.json
+├── docs/
+│   ├── architecture-diagram.png
+│   ├── roadmap.md
+│   └── pitch-deck.pptx
+└── scripts/
+    ├── deploy.sh
+    └── seed-db.js
+
+Monorepo quick run (once created)
+- Backend: cd backend && pnpm i && pnpm dev (serve on :5000)
+- Web: cd frontend && pnpm i && pnpm dev (serve on :5173)
+- Mobile: cd mobile && pnpm i && npx expo start
+- Test endpoints: curl http://localhost:5000/ping, /translate, /summarize
+
+Notes
+- All live functionality here resides in src/ (Convex full-stack). To create the separate monorepo (web + backend + mobile), use the "Sync to GitHub" tab to generate a new repo with the above layout, then paste in the generated code stubs.
+- Admin page (/admin) shows OpenRouter/Resend status. Manage API keys via Integrations.
+- Use the Dashboard to test live sessions, enrollments, AI notes, and reports.
+
 ## Overview
 
 This project uses the following tech stack:
@@ -80,6 +175,7 @@ On the `src/convex/users.ts` file, you can use the `getCurrentUser` function to 
 The `/auth` page is already set up to use auth. Navigate to `/auth` for all log in / sign up sequences.
 
 You MUST use this hook to get user data. Never do this yourself without the hook:
+
 ```typescript
 import { useAuth } from "@/hooks/use-auth";
 
