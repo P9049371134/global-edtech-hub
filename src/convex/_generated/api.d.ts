@@ -30,6 +30,7 @@ import type * as sessions from "../sessions.js";
 import type * as system from "../system.js";
 import type * as testData from "../testData.js";
 import type * as users from "../users.js";
+import type * as videos from "../videos.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   system: typeof system;
   testData: typeof testData;
   users: typeof users;
+  videos: typeof videos;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

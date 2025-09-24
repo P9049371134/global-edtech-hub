@@ -215,6 +215,19 @@ const schema = defineSchema(
       .index("by_channel", ["channel"])
       .index("by_channel_and_user", ["channel", "userId"])
       .index("by_channel_and_lastSeen", ["channel", "lastSeen"]),
+
+    // Videos (e.g., YouTube embeds attached to sessions/classrooms)
+    videos: defineTable({
+      provider: v.literal("youtube"),
+      videoId: v.string(),
+      title: v.optional(v.string()),
+      sessionId: v.optional(v.id("sessions")),
+      classroomId: v.optional(v.id("classrooms")),
+      addedBy: v.id("users"),
+      addedAt: v.number(),
+    })
+      .index("by_session", ["sessionId"])
+      .index("by_classroom", ["classroomId"]),
   },
   {
     schemaValidation: false,

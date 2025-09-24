@@ -348,6 +348,33 @@ export default function Admin() {
                     {system?.resend ? "Configured" : "Missing"}
                   </Badge>
                 </div>
+                <div className="flex items-center justify-between border rounded-md p-3">
+                  <div>
+                    <div className="font-medium">Google (Classroom/Calendar)</div>
+                    <div className="text-xs text-gray-500">OAuth for Classroom sync and Meet scheduling</div>
+                  </div>
+                  <Badge className={system?.google ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
+                    {system?.google ? "Configured" : "Missing"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between border rounded-md p-3">
+                  <div>
+                    <div className="font-medium">Zoom</div>
+                    <div className="text-xs text-gray-500">Meetings API / Web SDK</div>
+                  </div>
+                  <Badge className={system?.zoom ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
+                    {system?.zoom ? "Configured" : "Missing"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between border rounded-md p-3">
+                  <div>
+                    <div className="font-medium">YouTube</div>
+                    <div className="text-xs text-gray-500">Optional OAuth for uploads; embed works without</div>
+                  </div>
+                  <Badge className={system?.youtube ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
+                    {system?.youtube ? "Configured" : "Missing"}
+                  </Badge>
+                </div>
                 <div className="text-xs text-gray-500">
                   Manage API keys via Integrations tab. Changes take effect immediately.
                 </div>
