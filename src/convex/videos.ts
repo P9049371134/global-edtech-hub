@@ -51,9 +51,12 @@ export const addToSession = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
 
-    const isOwner = session.teacherId === me._id;
+    // Authorize: session owner OR classroom owner OR admin
+    const classroom = await ctx.db.get(session.classroomId);
+    const isSessionOwner = session.teacherId === me._id;
+    const isClassroomOwner = classroom ? classroom.teacherId === me._id : false;
     const isAdmin = me.role === "admin";
-    if (!isOwner && !isAdmin) throw new Error("Unauthorized");
+    if (!isSessionOwner && !isClassroomOwner && !isAdmin) throw new Error("Unauthorized");
 
     const videoId = extractYouTubeId(args.urlOrId);
     if (!videoId) throw new Error("Invalid YouTube URL or ID");

@@ -233,8 +233,15 @@ function SessionCard({
 
   const { user } = useAuth();
 
+  // Permission flags
+  const isOwner = !!user && user._id === session.teacherId;
+  const isAdmin = user?.role === "admin";
+  const canManage = isOwner || isAdmin;
+
   // Server-backed transcript hooks
   const liveTranscript = useQuery(api.transcription.getLiveForSession, { sessionId: session._id as any } as any) as any;
+  // Local any-cast to avoid TS "never" property issues
+  const lt: any = liveTranscript ?? null;
   const startServerTranscript = useMutation(api.transcription.start);
   const appendServerChunk = useMutation(api.transcription.appendChunk);
   const stopServerTranscript = useMutation(api.transcription.stop);
@@ -279,8 +286,8 @@ function SessionCard({
       if (finalText) {
         setTranscript((prev) => `${prev}${finalText}`);
         // If a server transcript is live, append chunk
-        if (liveTranscript?._id) {
-          appendServerChunk({ transcriptId: liveTranscript._id, text: finalText } as any).catch(() => {});
+        if (lt?._id) {
+          appendServerChunk({ transcriptId: lt._id, text: finalText } as any).catch(() => {});
         }
       }
     };
@@ -292,7 +299,7 @@ function SessionCard({
       setIsRecording(false);
     };
     return rec;
-  }, [lang, liveTranscript?._id]);
+  }, [lang, lt?._id]);
   
   const startRec = async () => {
     const SR = getSpeechRecognition();
@@ -302,7 +309,7 @@ function SessionCard({
     }
     // Ensure server transcript (teacher/admin only auto-start; others skip)
     try {
-      if ((user?.role === "teacher" || user?.role === "admin") && !liveTranscript?._id) {
+      if ((user?.role === "teacher" || user?.role === "admin") && !lt?._id) {
         await startServerTranscript({
           sessionId: session._id as any,
           sourceLanguage: lang,
@@ -336,17 +343,17 @@ function SessionCard({
     } catch {}
     // Stop server transcript if owner/admin
     try {
-      if ((user?.role === "teacher" || user?.role === "admin") && liveTranscript?._id) {
-        await stopServerTranscript({ transcriptId: liveTranscript._id } as any);
+      if ((user?.role === "teacher" || user?.role === "admin") && lt?._id) {
+        await stopServerTranscript({ transcriptId: lt._id } as any);
       }
     } catch {}
   };
 
   const onChangeTargetLang = async (val: string) => {
     setLang(val);
-    if (liveTranscript?._id && (user?.role === "teacher" || user?.role === "admin")) {
+    if (lt?._id && (user?.role === "teacher" || user?.role === "admin")) {
       try {
-        await setTargetLang({ transcriptId: liveTranscript._id, targetLanguage: val } as any);
+        await setTargetLang({ transcriptId: lt._id, targetLanguage: val } as any);
       } catch {}
     }
   };
@@ -370,13 +377,11 @@ function SessionCard({
   }, [transcript, session?.title]);
 
   const serverDownloadHref =
-    liveTranscript?._id ? `/api/transcripts/export?transcriptId=${liveTranscript._id}` : null;
+    lt?._id ? `/api/transcripts/export?transcriptId=${lt._id}` : null;
 
   React.useEffect(() => {
-    // Stop recording if language changed mid-stream
     if (isRecording) {
       stopRec();
-      // slight delay then restart with new language
       setTimeout(() => startRec(), 200);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -408,19 +413,23 @@ function SessionCard({
               Join Google Meet
             </a>
           ) : (
+            canManage && (
+              <button
+                className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
+                onClick={() => onSchedule(session._id)}
+              >
+                Schedule Meet
+              </button>
+            )
+          )}
+          {canManage && (
             <button
-              className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
-              onClick={() => onSchedule(session._id)}
+              className="text-sm px-3 py-1 rounded-md border border-purple-200 text-purple-700 hover:bg-purple-50"
+              onClick={() => onAttach(session._id)}
             >
-              Schedule Meet
+              Attach YouTube
             </button>
           )}
-          <button
-            className="text-sm px-3 py-1 rounded-md border border-purple-200 text-purple-700 hover:bg-purple-50"
-            onClick={() => onAttach(session._id)}
-          >
-            Attach YouTube
-          </button>
           {/* Add: Live Transcript toggle */}
           <button
             className="text-sm px-3 py-1 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50"
@@ -489,9 +498,9 @@ function SessionCard({
 
             <div className="h-40 overflow-auto rounded border bg-white p-2 text-sm leading-6">
               {/* Prefer server transcript if present; fallback to local */}
-              {liveTranscript?.chunks?.length ? (
+              {lt?.chunks?.length ? (
                 <pre className="whitespace-pre-wrap font-sans">
-                  {(liveTranscript.chunks as any[]).map((c) => c.translated ?? c.text).join("")}
+                  {(lt.chunks as any[]).map((c) => c.translated ?? c.text).join("")}
                 </pre>
               ) : transcript ? (
                 <pre className="whitespace-pre-wrap font-sans">{transcript}</pre>
