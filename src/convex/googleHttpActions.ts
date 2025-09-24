@@ -110,8 +110,9 @@ export const exchangeCodeAndStore = internalAction({
   handler: async (ctx, args) => {
     let userId: string | null = null;
     try {
-      const { userId: uid } = JSON.parse(Buffer.from(args.state, "base64").toString("utf8"));
-      userId = uid;
+      // Decode URL-encoded JSON state instead of base64 Buffer decoding
+      const parsed = JSON.parse(decodeURIComponent(args.state)) as { userId?: string };
+      userId = parsed.userId ?? null;
     } catch {
       throw new Error("Invalid state");
     }

@@ -1,29 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
-import { 
-  Globe, 
-  Brain, 
-  BarChart3, 
-  Video, 
-  Users, 
-  BookOpen, 
-  Zap, 
-  Shield, 
-  ArrowRight,
-  CheckCircle,
-  Star,
-  Play,
-  MessageSquare,
-  FileText,
-  TrendingUp
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useEffect, useState } from "react";
-import { ChatBox } from "@/components/landing/ChatBox";
-import { PresencePanel } from "@/components/landing/PresencePanel";
 import { Hero } from "@/components/landing/Hero";
 import { Features } from "@/components/landing/Features";
 import { HowItWorks } from "@/components/landing/HowItWorks";
@@ -31,67 +10,10 @@ import { RTCDemo } from "@/components/landing/RTCDemo";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
-import { api } from "@/convex/_generated/api";
-import { useMutation, useQuery } from "convex/react";
 
 export default function Landing() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-
-  const features = [
-    {
-      icon: Video,
-      title: "Live Virtual Classrooms",
-      description: "Interactive video sessions with real-time collaboration tools",
-      color: "from-blue-500 to-blue-600"
-    },
-    {
-      icon: Globe,
-      title: "Real-time Translation",
-      description: "Break language barriers with instant translation in 50+ languages",
-      color: "from-green-500 to-green-600"
-    },
-    {
-      icon: Brain,
-      title: "AI Note Summarization",
-      description: "Automatically generate summaries and key points from your notes",
-      color: "from-purple-500 to-purple-600"
-    },
-    {
-      icon: BarChart3,
-      title: "Performance Analytics",
-      description: "Detailed reports on attendance, participation, and learning progress",
-      color: "from-orange-500 to-orange-600"
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: "Sarah Chen",
-      role: "Mathematics Teacher",
-      content: "EduCollab transformed my online teaching. The AI summaries help students review key concepts effortlessly.",
-      rating: 5
-    },
-    {
-      name: "Miguel Rodriguez",
-      role: "High School Student",
-      content: "The real-time translation feature lets me learn from teachers worldwide. It's incredible!",
-      rating: 5
-    },
-    {
-      name: "Dr. Priya Patel",
-      role: "University Professor",
-      content: "The performance analytics give me insights I never had before. I can help struggling students immediately.",
-      rating: 5
-    }
-  ];
-
-  const stats = [
-    { number: "10K+", label: "Active Students" },
-    { number: "500+", label: "Expert Teachers" },
-    { number: "50+", label: "Languages Supported" },
-    { number: "95%", label: "Student Satisfaction" }
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
