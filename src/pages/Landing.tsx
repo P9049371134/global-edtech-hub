@@ -15,7 +15,7 @@ import { api } from "@/convex/_generated/api";
 import * as React from "react";
 
 export default function Landing() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -38,7 +38,15 @@ export default function Landing() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              {isAuthenticated ? (
+              {isLoading ? (
+                <Button
+                  disabled
+                  aria-busy="true"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 opacity-70 cursor-not-allowed"
+                >
+                  Loading...
+                </Button>
+              ) : isAuthenticated ? (
                 <div className="flex items-center space-x-3">
                   <span className="text-sm text-gray-600">Welcome, {user?.name}</span>
                   <Button 
