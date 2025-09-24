@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+/* removed unused Card imports */
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -8,6 +9,7 @@ import { motion } from "framer-motion";
 import { BookOpen, Video, FileText, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+/* removed unused recharts imports */
 import * as React from "react";
 import { HeaderBar } from "@/components/dashboard/HeaderBar";
 import { QuickStats } from "@/components/dashboard/QuickStats";

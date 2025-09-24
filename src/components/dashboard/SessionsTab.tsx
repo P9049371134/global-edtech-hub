@@ -24,10 +24,7 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
   const { user } = useAuth();
 
   const addVideo = useMutation(api.videos.addToSession);
-
-  // Add: meeting getter per session
-  const listMeeting = (sessionId: string) =>
-    useQuery(api.meetings.getForSession, { sessionId: sessionId as any } as any);
+  // removed unused listVideos and listMeeting
 
   const openAttach = (sessionId: string) => {
     setTargetSession(sessionId);

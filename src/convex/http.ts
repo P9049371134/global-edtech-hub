@@ -1,5 +1,6 @@
-// Add Node runtime so we can use node:crypto and external fetches
-"use node";
+// Add Node runtime directive required for httpAction + crypto usage
+/* Node runtime is implied for httpAction; directive not allowed here */
+/** Using Node APIs (crypto) inside httpAction handlers is supported without a directive */
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -82,8 +83,7 @@ http.route({
     const userId = url.searchParams.get("userId");
     if (!userId) return new Response("Missing userId", { status: 400 });
     const redirect = buildGoogleAuthUrl(userId);
-    // Return a redirect response without relying on DOM types
-    return new Response(null, { status: 302, headers: { Location: redirect } });
+    return Response.redirect(redirect, 302);
   }),
 });
 
@@ -157,11 +157,8 @@ http.route({
         scopes: [],
       });
 
-      // Redirect back to dashboard (avoid DOM static redirect typing)
-      return new Response(null, {
-        status: 302,
-        headers: { Location: "/dashboard?integration=google_connected" },
-      });
+      // Redirect back to dashboard
+      return Response.redirect("/dashboard?integration=google_connected", 302);
     } catch (e: any) {
       return new Response(`OAuth error: ${e?.message ?? "unknown"}`, { status: 500 });
     }
