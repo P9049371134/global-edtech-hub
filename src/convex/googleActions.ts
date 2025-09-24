@@ -3,6 +3,7 @@
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import * as crypto from "node:crypto";
+import { v } from "convex/values";
 
 // Helpers: encryption using TOKEN_ENCRYPTION_KEY (hex or base64, 32 bytes)
 function getKey(): Buffer {
@@ -51,9 +52,10 @@ function parseIdTokenSub(id_token: string): string | null {
 
 // Exchange OAuth code and store encrypted tokens
 export const exchangeOAuthCode = internalAction({
-  args: { code: (v: any) => typeof v === "string", stateB64: (v: any) => typeof v === "string" },
+  args: { code: v.string(), stateB64: v.string() },
   handler: async (ctx, args) => {
-    const state = JSON.parse(Buffer.from(args.stateB64, "base64").toString("utf8"));
+    // add narrow type to parsed state to satisfy TS
+    const state = JSON.parse(Buffer.from(args.stateB64, "base64").toString("utf8")) as { userId?: string };
     const userId: string | undefined = state?.userId;
     if (!userId) throw new Error("Missing userId in state");
 
@@ -132,7 +134,7 @@ async function ensureAccessToken(ctx: any, tokenRow: any): Promise<{ access: str
 
 // List Google Classroom courses
 export const listClassrooms = internalAction({
-  args: { userId: (v: any) => typeof v === "string" },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: args.userId as any });
     if (!token) return { error: "not connected" };
@@ -149,11 +151,11 @@ export const listClassrooms = internalAction({
 // Schedule Google Meet (Calendar event)
 export const scheduleMeet = internalAction({
   args: {
-    userId: (v: any) => typeof v === "string",
-    sessionId: (v: any) => typeof v === "string",
-    title: (v: any) => typeof v === "string",
-    start: (v: any) => typeof v === "string",
-    end: (v: any) => typeof v === "string",
+    userId: v.string(),
+    sessionId: v.string(),
+    title: v.string(),
+    start: v.string(),
+    end: v.string(),
   },
   handler: async (ctx, args) => {
     const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: args.userId as any });
