@@ -1,6 +1,42 @@
-# Global EdTech Hub
+# 🌍 Global EdTech Hub
 
-A virtual learning platform with real-time collaboration, AI-ready notes, and performance reporting (Convex + React + Tailwind).
+AI-powered collaboration and learning platform with live translation, note enhancement, and automatic performance reports. Inspired by Granola AI, built for students & teachers.
+
+Note: The section below outlines the vision and quick-start flow. The current live app in this repo implements many of these features using Convex (database + backend) with React and Tailwind. See the detailed implementation docs following this section.
+
+---
+
+## 🚀 Features
+- 🎙️ Live Lecture Transcription – auto speech-to-text for classes
+- 📝 Smart Notes – students write notes, AI enriches with transcript context
+- 📑 Templates – Lecture Summary, Key Concepts, Action Items
+- 🔗 Share & Collaborate – share notes with classmates/teachers
+- 📂 Auto Organization – notes grouped by course, date, and keywords
+- 📊 Reports – AI-generated progress summaries (future)
+
+---
+
+## 🛠️ Tech Stack (Vision)
+- Frontend: React (Web), React Native (Mobile)
+- Backend: Node.js + Express
+- Database: MongoDB / Firebase
+- AI/ML: Whisper / Google STT, OpenAI for summarization
+- Integrations: Google Classroom, Google Drive (future)
+
+Current implementation in this repo:
+- Frontend: Vite + React 19 + Tailwind v4 + Shadcn UI
+- Backend & Database: Convex (with Auth, Realtime, Actions)
+- Optional Integrations: OpenRouter (AI summaries), Resend (email notifications)
+- See detailed sections below for exact code-level behavior and usage.
+
+---
+
+## 📂 Project Structure (Vision)
+See docs/roadmap.md for build roadmap.
+
+---
+
+## ⚡ Quick Start (Vision)
 
 This repository contains the live web app implemented with:
 - React 19 + Vite
@@ -124,7 +160,7 @@ The convex server has a separate set of environment variables that are accessibl
 
 Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
 
-# Global EdTech Hub
+# 🌍 Global EdTech Hub
 
 A virtual learning platform with real-time collaboration, AI-ready notes, and performance reporting (Convex + React + Tailwind).
 
