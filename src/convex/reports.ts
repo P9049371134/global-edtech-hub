@@ -105,18 +105,35 @@ export const generateReport = mutation({
 
 // Get reports for a student
 export const getStudentReports = query({
-  args: { studentId: v.optional(v.id("users")) },
+  args: {
+    studentId: v.optional(v.id("users")),
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
     if (!user) return [];
 
     const targetStudentId = args.studentId || user._id;
 
-    // Teachers can view any student's reports, students can only view their own
     if (user.role !== "teacher" && user.role !== "admin" && targetStudentId !== user._id) {
       throw new Error("Unauthorized");
     }
 
+    const { startDate, endDate } = args;
+
+    if (startDate != null && endDate != null) {
+      // Use by_student_and_endDate for bounded queries
+      return await ctx.db
+        .query("reports")
+        .withIndex("by_student_and_endDate", (q) =>
+          q.eq("studentId", targetStudentId).gte("endDate", startDate).lte("endDate", endDate),
+        )
+        .order("desc")
+        .collect();
+    }
+
+    // Default: return all for student
     return await ctx.db
       .query("reports")
       .withIndex("by_student", (q) => q.eq("studentId", targetStudentId))

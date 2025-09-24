@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { motion } from "framer-motion";
 import { 
   BookOpen, 
@@ -23,6 +23,7 @@ import {
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
+import * as React from "react";
 
 export default function Dashboard() {
   const { user, isLoading } = useAuth();
@@ -32,10 +33,20 @@ export default function Dashboard() {
   const availableClassrooms = useQuery(api.classrooms.getAvailableClassrooms);
   const liveSessions = useQuery(api.sessions.getLiveSessions);
   const userNotes = useQuery(api.notes.getUserNotes);
-  const userReports = useQuery(api.reports.getStudentReports, {});
+  const [reportStart, setReportStart] = React.useState<string>("");
+  const [reportEnd, setReportEnd] = React.useState<string>("");
+
+  const startMs = reportStart ? new Date(reportStart).getTime() : undefined;
+  const endMs = reportEnd ? new Date(reportEnd).getTime() : undefined;
+
+  const userReports = useQuery(api.reports.getStudentReports, {
+    ...(startMs && endMs ? { startDate: startMs, endDate: endMs } : {}),
+  } as any);
   
   const enrollInClassroom = useMutation(api.classrooms.enrollInClassroom);
   const startSession = useMutation(api.sessions.startSession);
+  const sendEmails = useAction(api.notifications.sendSessionStartEmails);
+  const summarize = useMutation(api.notes.generateNoteSummary);
 
   if (isLoading) {
     return (
@@ -63,6 +74,9 @@ export default function Dashboard() {
     try {
       await startSession({ classroomId: classroomId as any, title });
       toast.success("Session started successfully!");
+      // Optional: fire-and-forget email notifications
+      sendEmails({ classroomId: classroomId as any, sessionTitle: title, teacherName: user.name ?? "Teacher" })
+        .catch(() => {});
     } catch (error) {
       toast.error("Failed to start session");
     }
@@ -339,12 +353,35 @@ export default function Dashboard() {
                           AI Generated
                         </Badge>
                       )}
+                      {note.summary && (
+                        <Badge className="bg-purple-100 text-purple-800">
+                          Summarized
+                        </Badge>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-gray-600 line-clamp-3">
-                      {note.content}
+                      {note.summary ?? note.content}
                     </p>
+                    <div className="mt-4">
+                      <Button
+                        size="sm"
+                        className="bg-purple-600 hover:bg-purple-700"
+                        disabled={!!note.summary}
+                        onClick={async () => {
+                          const p = summarize({ noteId: note._id as any });
+                          toast.promise(p, {
+                            loading: "Summarizing with AI...",
+                            success: "Summary generated!",
+                            error: "Failed to summarize",
+                          });
+                          await p;
+                        }}
+                      >
+                        Summarize with AI
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -353,6 +390,21 @@ export default function Dashboard() {
 
           <TabsContent value="reports" className="space-y-6">
             <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <input
+                  type="date"
+                  value={reportStart}
+                  onChange={(e) => setReportStart(e.target.value)}
+                  className="border border-orange-200 rounded px-2 py-1 text-sm"
+                />
+                <span className="text-sm text-gray-500">to</span>
+                <input
+                  type="date"
+                  value={reportEnd}
+                  onChange={(e) => setReportEnd(e.target.value)}
+                  className="border border-orange-200 rounded px-2 py-1 text-sm"
+                />
+              </div>
               <h3 className="text-xl font-semibold">Performance Reports</h3>
               <Button onClick={() => navigate("/reports")} variant="outline" className="border-orange-200">
                 Generate Report

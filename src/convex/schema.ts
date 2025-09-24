@@ -155,7 +155,8 @@ const schema = defineSchema(
       .index("by_student", ["studentId"])
       .index("by_classroom", ["classroomId"])
       .index("by_student_and_classroom", ["studentId", "classroomId"])
-      .index("by_report_type", ["reportType"]),
+      .index("by_report_type", ["reportType"])
+      .index("by_student_and_endDate", ["studentId", "endDate"]),
 
     // Assignments
     assignments: defineTable({

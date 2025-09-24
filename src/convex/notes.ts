@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
+import { internal } from "./_generated/api";
 
 // Get notes for a session
 export const getSessionNotes = query({
@@ -39,7 +40,7 @@ export const createNote = mutation({
   },
 });
 
-// Generate AI summary for notes
+// Replace the generateNoteSummary mutation to support background AI action via OpenRouter with fallback
 export const generateNoteSummary = mutation({
   args: { noteId: v.id("notes") },
   handler: async (ctx, args) => {
@@ -51,8 +52,18 @@ export const generateNoteSummary = mutation({
       throw new Error("Unauthorized");
     }
 
-    // Simulate AI summary generation
-    const summary = `AI Summary: ${note.content.substring(0, 100)}...`;
+    const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
+
+    if (hasOpenRouter) {
+      // Schedule background AI summary action (non-blocking)
+      await ctx.scheduler.runAfter(0, internal.ai.summarizeNoteAction, {
+        noteId: args.noteId,
+      });
+      return { status: "scheduled" };
+    }
+
+    // Fallback summarization if no API key is set (local quick summary)
+    const summary = `AI Summary: ${note.content.substring(0, 200)}...`;
     const keyPoints = [
       "Key concept discussed",
       "Important formula mentioned",
@@ -62,10 +73,10 @@ export const generateNoteSummary = mutation({
     await ctx.db.patch(args.noteId, {
       summary,
       keyPoints,
-      confidence: 0.85,
+      confidence: 0.75,
     });
 
-    return { summary, keyPoints };
+    return { status: "completed", summary, keyPoints };
   },
 });
 
