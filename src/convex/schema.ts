@@ -189,6 +189,27 @@ const schema = defineSchema(
       .index("by_assignment", ["assignmentId"])
       .index("by_student", ["studentId"])
       .index("by_assignment_and_student", ["assignmentId", "studentId"]),
+
+    // Real-time Messages (public channels, e.g., "global")
+    messages: defineTable({
+      channel: v.string(),
+      userId: v.id("users"),
+      name: v.string(),
+      text: v.string(),
+      // Using _creationTime ordering; do not index it
+    })
+      .index("by_channel", ["channel"]),
+
+    // Presence (who is online in a given channel)
+    presence: defineTable({
+      channel: v.string(),
+      userId: v.id("users"),
+      name: v.string(),
+      lastSeen: v.number(),
+    })
+      .index("by_channel", ["channel"])
+      .index("by_channel_and_user", ["channel", "userId"])
+      .index("by_channel_and_lastSeen", ["channel", "lastSeen"]),
   },
   {
     schemaValidation: false,

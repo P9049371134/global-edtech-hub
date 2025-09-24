@@ -219,6 +219,39 @@ export const seedTestData = mutation({
       generatedAt: Date.now(),
     });
 
+    // Create sample real-time messages for the Global Lounge
+    await ctx.db.insert("messages", {
+      channel: "global",
+      userId: teacherId,
+      name: "Dr. Sarah Johnson",
+      text: "Welcome to the Global Lounge! 👋",
+    });
+    await ctx.db.insert("messages", {
+      channel: "global",
+      userId: studentId1,
+      name: "Alex Chen",
+      text: "Hi everyone! Excited to collaborate in real-time. 🚀",
+    });
+    await ctx.db.insert("messages", {
+      channel: "global",
+      userId: studentId2,
+      name: "Maria Rodriguez",
+      text: "¡Hola! Encantada de estar aquí. 🌎",
+    });
+    // Optional: seed presence for feel of online users
+    await ctx.db.insert("presence", {
+      channel: "global",
+      userId: teacherId,
+      name: "Dr. Sarah Johnson",
+      lastSeen: Date.now(),
+    });
+    await ctx.db.insert("presence", {
+      channel: "global",
+      userId: studentId1,
+      name: "Alex Chen",
+      lastSeen: Date.now(),
+    });
+
     return {
       message: "Test data seeded successfully!",
       data: {

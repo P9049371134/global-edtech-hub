@@ -21,6 +21,11 @@ import {
   TrendingUp
 } from "lucide-react";
 import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { api } from "@/convex/_generated/api";
+import { useMutation, useQuery } from "convex/react";
 
 export default function Landing() {
   const { isAuthenticated, user } = useAuth();
@@ -343,6 +348,58 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Real-time Collaboration Demo */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-8 flex items-center justify-between"
+          >
+            <div>
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+                Real-time Collaboration
+              </h2>
+              <p className="text-gray-600 mt-2">
+                Jump into the Global Lounge to see live chat and presence updates instantly.
+              </p>
+            </div>
+            <Badge className="bg-green-100 text-green-800">
+              Live Demo
+            </Badge>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <Card className="lg:col-span-2 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-blue-600" />
+                  Global Lounge
+                </CardTitle>
+                <CardDescription>Public channel. Messages update in real-time.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChatBox />
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-green-600" />
+                  Online Now
+                </CardTitle>
+                <CardDescription>Users active in the last 2 minutes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PresencePanel />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section className="py-20 bg-white/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -473,6 +530,101 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function ChatBox() {
+  const { isAuthenticated, user } = useAuth();
+  const [text, setText] = useState("");
+  const messages = useQuery(api.messages.list, { channel: "global" });
+  const send = useMutation(api.messages.send);
+
+  const handleSend = async () => {
+    const value = text.trim();
+    if (!value) return;
+    try {
+      await send({ channel: "global", text: value });
+      setText("");
+    } catch {
+      // silently ignore; Landing is public
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-96">
+      <div className="flex-1 border border-gray-200 rounded-lg">
+        <ScrollArea className="h-80 p-4">
+          <div className="space-y-3">
+            {(messages ?? []).slice().reverse().map((m) => (
+              <div key={m._id} className="text-sm">
+                <span className="font-semibold text-gray-900">{m.name}</span>
+                <span className="text-gray-400 mx-2">•</span>
+                <span className="text-gray-600">{m.text}</span>
+              </div>
+            ))}
+            {messages && messages.length === 0 && (
+              <div className="text-gray-500 text-sm">No messages yet. Be the first to say hello!</div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Input
+          placeholder={isAuthenticated ? "Type a message..." : "Sign in to chat"}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          disabled={!isAuthenticated}
+        />
+        <Button
+          onClick={handleSend}
+          disabled={!isAuthenticated || !text.trim()}
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+        >
+          Send
+        </Button>
+      </div>
+      {!isAuthenticated && (
+        <p className="text-xs text-gray-500 mt-2">
+          You must be signed in to participate. Click Get Started above.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PresencePanel() {
+  const { isAuthenticated } = useAuth();
+  const online = useQuery(api.presence.online, { channel: "global" });
+  const ping = useMutation(api.presence.ping);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    // keep presence alive while on landing
+    const id = setInterval(() => {
+      ping({ channel: "global" }).catch(() => {});
+    }, 30_000);
+    // immediate ping
+    ping({ channel: "global" }).catch(() => {});
+    return () => clearInterval(id);
+  }, [isAuthenticated, ping]);
+
+  return (
+    <div className="space-y-3">
+      <div className="text-sm text-gray-600">
+        {online ? `${online.length} online` : "—"}
+      </div>
+      <div className="space-y-2">
+        {(online ?? []).map((u) => (
+          <div key={(u.userId as unknown as string)} className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            <span className="text-sm text-gray-800">{u.name}</span>
+          </div>
+        ))}
+        {online && online.length === 0 && (
+          <div className="text-sm text-gray-500">No one is online right now.</div>
+        )}
+      </div>
     </div>
   );
 }
