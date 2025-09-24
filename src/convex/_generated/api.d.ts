@@ -26,6 +26,7 @@ import type * as notificationsInternal from "../notificationsInternal.js";
 import type * as presence from "../presence.js";
 import type * as reports from "../reports.js";
 import type * as sessions from "../sessions.js";
+import type * as system from "../system.js";
 import type * as testData from "../testData.js";
 import type * as users from "../users.js";
 
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   presence: typeof presence;
   reports: typeof reports;
   sessions: typeof sessions;
+  system: typeof system;
   testData: typeof testData;
   users: typeof users;
 }>;

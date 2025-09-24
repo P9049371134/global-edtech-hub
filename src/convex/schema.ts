@@ -41,6 +41,8 @@ const schema = defineSchema(
       subject: v.optional(v.string()),
       preferredLanguage: v.optional(v.string()),
       timezone: v.optional(v.string()),
+      // Admin controls
+      isActive: v.optional(v.boolean()), // default: active if undefined
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
     // Virtual Classrooms

@@ -126,3 +126,16 @@ export const getClassroomDetails = query({
     };
   },
 });
+
+// Admin: list all classrooms
+export const listAllClassrooms = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getCurrentUser(ctx);
+    if (!me || me.role !== "admin") return [];
+    const q = ctx.db.query("classrooms");
+    const out: any[] = [];
+    for await (const c of q) out.push(c);
+    return out;
+  },
+});

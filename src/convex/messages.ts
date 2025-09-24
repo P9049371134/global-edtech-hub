@@ -1,6 +1,31 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { getCurrentUser } from "./users";
+
+// Admin: list recent messages by channel (default: global)
+export const listRecentMessages = query({
+  args: { channel: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const me = await getCurrentUser(ctx);
+    if (!me || me.role !== "admin") return [];
+    const channel = args.channel ?? "global";
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_channel", (q) => q.eq("channel", channel))
+      .order("desc")
+      .take(50);
+  },
+});
+
+// Admin: delete a message
+export const deleteMessage = mutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    const me = await getCurrentUser(ctx);
+    if (!me || me.role !== "admin") throw new Error("Unauthorized");
+    await ctx.db.delete(args.messageId);
+  },
+});
 
 // List recent messages for a channel (latest first, capped to 50)
 export const list = query({

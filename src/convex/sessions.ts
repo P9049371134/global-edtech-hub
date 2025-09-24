@@ -138,3 +138,32 @@ export const getLiveSessions = query({
       .collect();
   },
 });
+
+// Admin: start a session for any classroom
+export const adminStartSession = mutation({
+  args: { classroomId: v.id("classrooms"), title: v.string() },
+  handler: async (ctx, args) => {
+    const me = await getCurrentUser(ctx);
+    if (!me || me.role !== "admin") throw new Error("Unauthorized");
+    return await ctx.db.insert("sessions", {
+      classroomId: args.classroomId,
+      teacherId: me._id, // record initiator; ownership remains classroom teacher operationally
+      title: args.title,
+      startTime: Date.now(),
+      isLive: true,
+      attendeeCount: 0,
+    });
+  },
+});
+
+// Admin: end any session
+export const adminEndSession = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const me = await getCurrentUser(ctx);
+    if (!me || me.role !== "admin") throw new Error("Unauthorized");
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Not found");
+    await ctx.db.patch(args.sessionId, { endTime: Date.now(), isLive: false });
+  },
+});
