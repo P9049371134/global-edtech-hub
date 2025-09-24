@@ -22,8 +22,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChatBox } from "@/components/landing/ChatBox";
+import { PresencePanel } from "@/components/landing/PresencePanel";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 
@@ -530,101 +530,6 @@ export default function Landing() {
           </div>
         </div>
       </footer>
-    </div>
-  );
-}
-
-function ChatBox() {
-  const { isAuthenticated, user } = useAuth();
-  const [text, setText] = useState("");
-  const messages = useQuery(api.messages.list, { channel: "global" });
-  const send = useMutation(api.messages.send);
-
-  const handleSend = async () => {
-    const value = text.trim();
-    if (!value) return;
-    try {
-      await send({ channel: "global", text: value });
-      setText("");
-    } catch {
-      // silently ignore; Landing is public
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-96">
-      <div className="flex-1 border border-gray-200 rounded-lg">
-        <ScrollArea className="h-80 p-4">
-          <div className="space-y-3">
-            {(messages ?? []).slice().reverse().map((m) => (
-              <div key={m._id} className="text-sm">
-                <span className="font-semibold text-gray-900">{m.name}</span>
-                <span className="text-gray-400 mx-2">•</span>
-                <span className="text-gray-600">{m.text}</span>
-              </div>
-            ))}
-            {messages && messages.length === 0 && (
-              <div className="text-gray-500 text-sm">No messages yet. Be the first to say hello!</div>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-      <div className="mt-3 flex gap-2">
-        <Input
-          placeholder={isAuthenticated ? "Type a message..." : "Sign in to chat"}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          disabled={!isAuthenticated}
-        />
-        <Button
-          onClick={handleSend}
-          disabled={!isAuthenticated || !text.trim()}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-        >
-          Send
-        </Button>
-      </div>
-      {!isAuthenticated && (
-        <p className="text-xs text-gray-500 mt-2">
-          You must be signed in to participate. Click Get Started above.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function PresencePanel() {
-  const { isAuthenticated } = useAuth();
-  const online = useQuery(api.presence.online, { channel: "global" });
-  const ping = useMutation(api.presence.ping);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    // keep presence alive while on landing
-    const id = setInterval(() => {
-      ping({ channel: "global" }).catch(() => {});
-    }, 30_000);
-    // immediate ping
-    ping({ channel: "global" }).catch(() => {});
-    return () => clearInterval(id);
-  }, [isAuthenticated, ping]);
-
-  return (
-    <div className="space-y-3">
-      <div className="text-sm text-gray-600">
-        {online ? `${online.length} online` : "—"}
-      </div>
-      <div className="space-y-2">
-        {(online ?? []).map((u) => (
-          <div key={(u.userId as unknown as string)} className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-sm text-gray-800">{u.name}</span>
-          </div>
-        ))}
-        {online && online.length === 0 && (
-          <div className="text-sm text-gray-500">No one is online right now.</div>
-        )}
-      </div>
     </div>
   );
 }
