@@ -8,4 +8,8 @@ declare global {
   }
 }
 
+declare module "node:crypto";
+
+declare const Buffer: any;
+
 export {};

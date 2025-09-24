@@ -224,6 +224,118 @@ function SessionCard({
   const videos = useQuery(api.videos.listForSession, { sessionId: session._id as any } as any);
   const meeting = useQuery(api.meetings.getForSession, { sessionId: session._id as any } as any);
 
+  // Add: Live Transcript (Web Speech API) state
+  const [showTranscript, setShowTranscript] = React.useState(false);
+  const [isRecording, setIsRecording] = React.useState(false);
+  const [lang, setLang] = React.useState("en-US");
+  const [transcript, setTranscript] = React.useState("");
+  const recognitionRef = React.useRef<any>(null);
+
+  const LANGS: Array<string> = [
+    "en-US",
+    "es-ES",
+    "fr-FR",
+    "hi-IN",
+    "de-DE",
+    "zh-CN",
+    "ja-JP",
+    "ar-SA",
+  ];
+
+  const getSpeechRecognition = () => {
+    if (typeof window === "undefined") return null;
+    const SR: any =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+    return SR;
+  };
+
+  const initRecognition = React.useCallback(() => {
+    const SR = getSpeechRecognition();
+    if (!SR) return null;
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = lang;
+    rec.onresult = (event: any) => {
+      let finalText = "";
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const chunk = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += chunk + " ";
+        } else {
+          interim += chunk;
+        }
+      }
+      setTranscript((prev) => (finalText ? `${prev}${finalText}` : prev));
+      // Optionally show interim visually in future; keep minimal for now
+    };
+    rec.onerror = (e: any) => {
+      toast.error(`Transcription error: ${e?.error ?? "unknown"}`);
+      setIsRecording(false);
+    };
+    rec.onend = () => {
+      setIsRecording(false);
+    };
+    return rec;
+  }, [lang]);
+
+  const startRec = () => {
+    const SR = getSpeechRecognition();
+    if (!SR) {
+      toast.error("Live transcription not supported in this browser.");
+      return;
+    }
+    if (isRecording) return;
+    const rec = initRecognition();
+    if (!rec) {
+      toast.error("Could not start transcription.");
+      return;
+    }
+    try {
+      recognitionRef.current = rec;
+      rec.start();
+      setIsRecording(true);
+      toast("Transcription started");
+    } catch (e) {
+      toast.error("Failed to start transcription");
+    }
+  };
+
+  const stopRec = () => {
+    if (!isRecording) return;
+    try {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      toast("Transcription stopped");
+    } catch {
+      // ignore
+    }
+  };
+
+  const downloadTxt = () => {
+    const blob = new Blob([transcript || ""], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const titleSafe = (session.title || "session").replace(/[^a-z0-9-_]+/gi, "_");
+    a.href = url;
+    a.download = `${titleSafe}_transcript.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  React.useEffect(() => {
+    // Stop recording if language changed mid-stream
+    if (isRecording) {
+      stopRec();
+      // slight delay then restart with new language
+      setTimeout(() => startRec(), 200);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
+
   return (
     <div className="border rounded-md p-4 bg-white border-green-100">
       <div className="flex items-center justify-between">
@@ -263,8 +375,68 @@ function SessionCard({
           >
             Attach YouTube
           </button>
+          {/* Add: Live Transcript toggle */}
+          <button
+            className="text-sm px-3 py-1 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50"
+            onClick={() => setShowTranscript((v) => !v)}
+          >
+            {showTranscript ? "Hide Transcript" : "Live Transcript"}
+          </button>
         </div>
       </div>
+
+      {/* Live Transcript Panel */}
+      {showTranscript && (
+        <div className="mt-3 rounded-md border bg-gray-50">
+          <div className="p-3 flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <div className="text-sm text-gray-700">Recognition language</div>
+              <select
+                className="text-sm border rounded px-2 py-1 bg-white"
+                value={lang}
+                onChange={(e) => setLang(e.target.value)}
+              >
+                {LANGS.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2 mt-1 sm:mt-0">
+                {!isRecording ? (
+                  <button
+                    className="text-sm px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-gray-900"
+                    onClick={startRec}
+                  >
+                    Start
+                  </button>
+                ) : (
+                  <button
+                    className="text-sm px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700"
+                    onClick={stopRec}
+                  >
+                    Stop
+                  </button>
+                )}
+                <button
+                  className="text-sm px-3 py-1 rounded-md border border-gray-300 text-gray-800 hover:bg-white"
+                  onClick={downloadTxt}
+                  disabled={!transcript.trim()}
+                >
+                  Download .txt
+                </button>
+              </div>
+            </div>
+            <div className="h-40 overflow-auto rounded border bg-white p-2 text-sm leading-6">
+              {transcript ? (
+                <pre className="whitespace-pre-wrap font-sans">{transcript}</pre>
+              ) : (
+                <div className="text-gray-400">No transcript yet. Click "Start" to begin.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {(videos ?? []).length > 0 && (
         <div className="mt-3 space-y-2">

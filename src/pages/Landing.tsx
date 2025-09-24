@@ -15,6 +15,12 @@ export default function Landing() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
+  // Removed unused 'features' array
+
+  // Removed unused 'testimonials' array
+
+  // Removed unused 'stats' array
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Navigation */}
