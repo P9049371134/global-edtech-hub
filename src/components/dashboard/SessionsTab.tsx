@@ -234,7 +234,7 @@ function SessionCard({
   const { user } = useAuth();
 
   // Server-backed transcript hooks
-  const liveTranscript = useQuery(api.transcription.getLiveForSession, { sessionId: session._id as any } as any);
+  const liveTranscript = useQuery(api.transcription.getLiveForSession, { sessionId: session._id as any } as any) as any;
   const startServerTranscript = useMutation(api.transcription.start);
   const appendServerChunk = useMutation(api.transcription.appendChunk);
   const stopServerTranscript = useMutation(api.transcription.stop);
@@ -370,7 +370,7 @@ function SessionCard({
   }, [transcript, session?.title]);
 
   const serverDownloadHref =
-    liveTranscript?._id ? `/api/transcripts/${liveTranscript._id}.txt` : null;
+    liveTranscript?._id ? `/api/transcripts/export?transcriptId=${liveTranscript._id}` : null;
 
   React.useEffect(() => {
     // Stop recording if language changed mid-stream

@@ -133,10 +133,10 @@ export const getStudentReports = query({
         .collect();
     }
 
-    // Default: return all for student
+    // Default: return all for student using existing composite index
     return await ctx.db
       .query("reports")
-      .withIndex("by_student", (q) => q.eq("studentId", targetStudentId))
+      .withIndex("by_student_and_endDate", (q) => q.eq("studentId", targetStudentId))
       .order("desc")
       .collect();
   },
@@ -153,7 +153,9 @@ export const getClassroomReports = query({
 
     return await ctx.db
       .query("reports")
-      .withIndex("by_classroom", (q) => q.eq("classroomId", args.classroomId))
+      // NOTE: Using filter here to avoid referencing a non-existent index.
+      // If needed, add an index `by_classroom` on reports in schema for performance.
+      .filter((q) => q.eq(q.field("classroomId"), args.classroomId))
       .order("desc")
       .collect();
   },

@@ -6,10 +6,12 @@ declare global {
      */
     navigateToAuth: (redirectUrl: string) => void;
   }
+
+  // Provide global Buffer type/value to satisfy TS without @types/node
+  var Buffer: any;
+  type Buffer = any;
 }
 
 declare module "node:crypto";
-
-declare const Buffer: any;
 
 export {};

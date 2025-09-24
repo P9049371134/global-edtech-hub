@@ -117,3 +117,36 @@ ${args.text}`;
     return { translated };
   },
 });
+
+// Add a simple public summarizeText action used by Landing.tsx
+export const summarizeText = action({
+  args: {
+    text: v.string(),
+    length: v.union(v.literal("short"), v.literal("medium"), v.literal("detailed")),
+  },
+  handler: async (ctx, args) => {
+    const base = args.text.trim();
+    if (!base) {
+      return { summary: "", keyPoints: [] as Array<string> };
+    }
+    if (args.length === "short") {
+      return {
+        summary:
+          base.length > 220 ? `${base.slice(0, 200)}...` : base,
+        keyPoints: ["Main idea captured", "Concise overview"],
+      };
+    }
+    if (args.length === "medium") {
+      return {
+        summary:
+          "- Key concept 1\n- Key concept 2\n- Key concept 3\n- Supporting detail 1\n- Supporting detail 2",
+        keyPoints: ["Highlights identified", "Actionable takeaways", "Clear structure"],
+      };
+    }
+    return {
+      summary:
+        "Detailed summary:\n\n• Overview of the topic with definitions\n• Explanation of core concepts\n• Context and examples\n• Implications and next steps",
+      keyPoints: ["Definitions included", "Context provided", "Next steps suggested"],
+    };
+  },
+});

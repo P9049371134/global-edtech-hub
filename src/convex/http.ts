@@ -3,8 +3,7 @@
 /** Using Node APIs (crypto) inside httpAction handlers is supported without a directive */
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
-import * as crypto from "node:crypto";
+import { api, internal } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -70,82 +69,10 @@ http.route({
   }),
 });
 
-// Helper to ensure access token (refresh if needed)
-async function ensureAccessToken(
-  ctx: any,
-  tokenRow: any
-): Promise<{ access: string; tokenId: string }> {
-  // Inline helpers to avoid cross-file deps
-  function getKey() {
-    const raw = process.env.TOKEN_ENCRYPTION_KEY || "";
-    if (!raw) throw new Error("Missing TOKEN_ENCRYPTION_KEY");
-    if (/^[0-9a-fA-F]+$/.test(raw) && raw.length === 64) {
-      return Buffer.from(raw, "hex");
-    }
-    const buf = Buffer.from(raw, "base64");
-    if (buf.length !== 32) {
-      throw new Error("TOKEN_ENCRYPTION_KEY must be 32 bytes (hex or base64)");
-    }
-    return buf;
-  }
-  function decryptStr(token: string): string {
-    const [ivB64, tagB64, dataB64] = token.split(".");
-    const key = getKey();
-    const iv = Buffer.from(ivB64, "base64");
-    const tag = Buffer.from(tagB64, "base64");
-    const data = Buffer.from(dataB64, "base64");
-    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-    decipher.setAuthTag(tag);
-    const dec = Buffer.concat([decipher.update(data), decipher.final()]);
-    return dec.toString("utf8");
-  }
-  function encryptStr(text: string): string {
-    const key = getKey();
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-    const enc = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
-    const tag = cipher.getAuthTag();
-    return `${iv.toString("base64")}.${tag.toString("base64")}.${enc.toString("base64")}`;
-  }
+/* Removed Node crypto usage and token handling from http.ts to avoid Node APIs in http runtime.
+   All Google token and API operations are delegated to internal googleHttpActions. */
 
-  const now = Date.now();
-  if (tokenRow.expiresAt - now > 60_000 && tokenRow.accessTokenEncrypted) {
-    // Decrypt still-valid access token
-    return { access: decryptStr(tokenRow.accessTokenEncrypted), tokenId: tokenRow._id };
-  }
-
-  // Refresh using decrypted refresh token
-  const refresh = decryptStr(tokenRow.refreshTokenEncrypted);
-  const body = new URLSearchParams();
-  body.set("client_id", process.env.GOOGLE_CLIENT_ID || "");
-  body.set("client_secret", process.env.GOOGLE_CLIENT_SECRET || "");
-  body.set("refresh_token", refresh);
-  body.set("grant_type", "refresh_token");
-
-  const resp = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error(`refresh failed: ${resp.status} ${t}`);
-  }
-
-  const data = (await resp.json()) as { access_token: string; expires_in: number };
-  const newAccessEnc = encryptStr(data.access_token);
-  const newExpiresAt = Date.now() + data.expires_in * 1000;
-
-  await ctx.runMutation(internal.googleInternal.updateAccessToken, {
-    tokenId: tokenRow._id,
-    newAccessTokenEncrypted: newAccessEnc,
-    newExpiresAt,
-  });
-
-  return { access: data.access_token, tokenId: tokenRow._id };
-}
-
-// GET /api/integrations/google/classrooms?userId=...
+/* GET /api/integrations/google/classrooms?userId=... */
 http.route({
   path: "/api/integrations/google/classrooms",
   method: "GET",
@@ -153,14 +80,18 @@ http.route({
     const url = new URL(req.url);
     const userId = url.searchParams.get("userId");
     if (!userId) return new Response("Missing userId", { status: 400 });
-    const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: userId as any });
-    if (!token) return new Response(JSON.stringify({ error: "not connected" }), { status: 403 });
-    const { access } = await ensureAccessToken(ctx, token);
-    const resp = await fetch("https://classroom.googleapis.com/v1/courses", {
-      headers: { Authorization: `Bearer ${access}` },
-    });
-    const data = await resp.json();
-    return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
+    try {
+      const data = await ctx.runAction(internal.googleHttpActions.listCourses, { userId: userId as any });
+      return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e?.message ?? "Unknown error" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   }),
 });
 
@@ -182,56 +113,71 @@ http.route({
   }),
 });
 
-// POST /api/integrations/google/schedule-meet  body: { userId, sessionId, title, start, end }
+/* POST /api/integrations/google/schedule-meet  body: { userId, sessionId, title, start, end } */
 http.route({
   path: "/api/integrations/google/schedule-meet",
   method: "POST",
   handler: httpAction(async (ctx, req) => {
     const body = await req.json();
     const { userId, sessionId, title, start, end } = body || {};
-    if (!userId || !sessionId || !title || !start || !end)
+    if (!userId || !sessionId || !title || !start || !end) {
       return new Response("Missing fields", { status: 400 });
-    const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: userId as any });
-    if (!token) return new Response(JSON.stringify({ error: "not connected" }), { status: 403 });
-    const { access } = await ensureAccessToken(ctx, token);
-    const event = {
-      summary: title,
-      start: { dateTime: start },
-      end: { dateTime: end },
-      conferenceData: { createRequest: { requestId: `meet-${Date.now()}` } },
-    };
-    const resp = await fetch(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${access}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(event),
-      }
-    );
-    if (!resp.ok) {
-      const t = await resp.text();
-      return new Response(`Calendar error: ${t}`, { status: 500 });
     }
-    const data: any = await resp.json();
-    const meetUrl =
-      data?.conferenceData?.entryPoints?.find((e: any) => e.entryPointType === "video")?.uri ||
-      data?.hangoutLink ||
-      "";
-    await ctx.runMutation(internal.googleInternal.insertMeeting, {
-      provider: "google",
-      providerMeetingId: data.id,
-      providerMeetingUrl: meetUrl,
-      sessionId: sessionId as any,
-      scheduledAt: new Date(start).getTime(),
-      createdBy: userId as any,
-    });
-    return new Response(JSON.stringify({ meetUrl, eventId: data.id }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    try {
+      const result = await ctx.runAction(internal.googleHttpActions.scheduleMeet, {
+        userId: userId as any,
+        sessionId: sessionId as any,
+        title,
+        start,
+        end,
+      });
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e?.message ?? "Unknown error" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }),
+});
+
+// Add: Transcript export endpoint (download .txt)
+http.route({
+  path: "/api/transcripts/export",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const transcriptId = url.searchParams.get("transcriptId");
+    if (!transcriptId) {
+      return new Response("Missing transcriptId", { status: 400 });
+    }
+    try {
+      const doc: any = await ctx.runQuery(api.transcription.getById, {
+        transcriptId: transcriptId as any,
+      });
+      if (!doc) {
+        return new Response("Not found", { status: 404 });
+      }
+      const content =
+        Array.isArray(doc.chunks)
+          ? (doc.chunks as any[])
+              .map((c) => (c.translated ?? c.text))
+              .join("\n")
+          : "";
+
+      return new Response(content, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Disposition": `attachment; filename="transcript_${doc._id}.txt"`,
+        },
+      });
+    } catch (e: any) {
+      return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 });
+    }
   }),
 });
 

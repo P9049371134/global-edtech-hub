@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
+import type React from "react";
 import { toast } from "sonner";
 
 export function ChatBox() {
