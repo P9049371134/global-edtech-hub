@@ -234,7 +234,7 @@ function SessionCard({
   const { user } = useAuth();
 
   // Server-backed transcript hooks
-  const liveTranscript = useQuery(api.transcription.getLiveForSession, { sessionId: session._id as any } as any) as any;
+  const liveTranscript = useQuery(api.transcription.getLiveForSession, { sessionId: session._id as any } as any);
   const startServerTranscript = useMutation(api.transcription.start);
   const appendServerChunk = useMutation(api.transcription.appendChunk);
   const stopServerTranscript = useMutation(api.transcription.stop);
@@ -353,7 +353,12 @@ function SessionCard({
 
   // Add: Local .txt downloader for client-only transcript
   const downloadTxt = React.useCallback(() => {
-    const content = (transcript || "").trim();
+    const serverContent =
+      liveTranscript?.chunks?.length
+        ? (liveTranscript.chunks as any[]).map((c) => c.translated ?? c.text).join("")
+        : "";
+    const localContent = (transcript || "").trim();
+    const content = (serverContent || localContent).trim();
     if (!content) return;
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -367,10 +372,12 @@ function SessionCard({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [transcript, session?.title]);
+  }, [liveTranscript?.chunks, transcript, session?.title]);
 
-  const serverDownloadHref =
-    liveTranscript?._id ? `/api/transcripts/export?transcriptId=${liveTranscript._id}` : null;
+  const hasDownload = !!(
+    (liveTranscript?.chunks?.length ?? 0) > 0 ||
+    (transcript || "").trim().length > 0
+  );
 
   React.useEffect(() => {
     // Stop recording if language changed mid-stream
@@ -466,24 +473,13 @@ function SessionCard({
                   </button>
                 )}
 
-                {serverDownloadHref ? (
-                  <a
-                    className="text-sm px-3 py-1 rounded-md border border-gray-300 text-gray-800 hover:bg-white"
-                    href={serverDownloadHref}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Download .txt
-                  </a>
-                ) : (
-                  <button
-                    className="text-sm px-3 py-1 rounded-md border border-gray-300 text-gray-800 hover:bg-white"
-                    onClick={downloadTxt}
-                    disabled={!transcript.trim()}
-                  >
-                    Download .txt
-                  </button>
-                )}
+                <button
+                  className="text-sm px-3 py-1 rounded-md border border-gray-300 text-gray-800 hover:bg-white"
+                  onClick={downloadTxt}
+                  disabled={!hasDownload}
+                >
+                  Download .txt
+                </button>
               </div>
             </div>
 
