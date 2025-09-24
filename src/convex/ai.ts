@@ -1,6 +1,6 @@
 "use node";
 
-import { internalAction } from "./_generated/server";
+import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
@@ -67,8 +67,7 @@ ${note.content}
 });
 
 // Add a public action to translate arbitrary text using OpenRouter
-import { action } from "./_generated/server";
-import { v } from "convex/values"; // ensure v is available for args
+/* removed duplicate import */
 
 export const translateText = action({
   args: {

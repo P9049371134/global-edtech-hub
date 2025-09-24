@@ -3,7 +3,7 @@
 /** Using Node APIs (crypto) inside httpAction handlers is supported without a directive */
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -105,7 +105,7 @@ async function ensureAccessToken(
   return { access: newAccess, tokenId: tokenRow._id };
 }
 
-// GET /api/integrations/google/classrooms?userId=...
+ // GET /api/integrations/google/classrooms?userId=...
 http.route({
   path: "/api/integrations/google/classrooms",
   method: "GET",
@@ -113,14 +113,12 @@ http.route({
     const url = new URL(req.url);
     const userId = url.searchParams.get("userId");
     if (!userId) return new Response("Missing userId", { status: 400 });
-    const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: userId as any });
-    if (!token) return new Response(JSON.stringify({ error: "not connected" }), { status: 403 });
-    const { access } = await ensureAccessToken(ctx, token);
-    const resp = await fetch("https://classroom.googleapis.com/v1/courses", {
-      headers: { Authorization: `Bearer ${access}` },
+    const data = await ctx.runAction(internal.googleActions.listClassrooms, { userId });
+    const status = (data as any)?.error ? 403 : 200;
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { "Content-Type": "application/json" },
     });
-    const data = await resp.json();
-    return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
   }),
 });
 
@@ -142,7 +140,7 @@ http.route({
   }),
 });
 
-// POST /api/integrations/google/schedule-meet  body: { userId, sessionId, title, start, end }
+ // POST /api/integrations/google/schedule-meet  body: { userId, sessionId, title, start, end }
 http.route({
   path: "/api/integrations/google/schedule-meet",
   method: "POST",
@@ -151,51 +149,26 @@ http.route({
     const { userId, sessionId, title, start, end } = body || {};
     if (!userId || !sessionId || !title || !start || !end)
       return new Response("Missing fields", { status: 400 });
-    const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: userId as any });
-    if (!token) return new Response(JSON.stringify({ error: "not connected" }), { status: 403 });
-    const { access } = await ensureAccessToken(ctx, token);
-    const event = {
-      summary: title,
-      start: { dateTime: start },
-      end: { dateTime: end },
-      conferenceData: { createRequest: { requestId: `meet-${Date.now()}` } },
-    };
-    const resp = await fetch(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${access}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(event),
-      }
-    );
-    if (!resp.ok) {
-      const t = await resp.text();
-      return new Response(`Calendar error: ${t}`, { status: 500 });
+
+    try {
+      const result = await ctx.runAction(internal.googleActions.scheduleMeet, {
+        userId,
+        sessionId,
+        title,
+        start,
+        end,
+      });
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (e: any) {
+      return new Response(`Calendar error: ${e?.message ?? "unknown"}`, { status: 500 });
     }
-    const data: any = await resp.json();
-    const meetUrl =
-      data?.conferenceData?.entryPoints?.find((e: any) => e.entryPointType === "video")?.uri ||
-      data?.hangoutLink ||
-      "";
-    await ctx.runMutation(internal.googleInternal.insertMeeting, {
-      provider: "google",
-      providerMeetingId: data.id,
-      providerMeetingUrl: meetUrl,
-      sessionId: sessionId as any,
-      scheduledAt: new Date(start).getTime(),
-      createdBy: userId as any,
-    });
-    return new Response(JSON.stringify({ meetUrl, eventId: data.id }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
   }),
 });
 
-// ADD: Transcript TXT export route
+ // ADD: Transcript TXT export route
 http.route({
   path: "/api/transcripts/:id.txt",
   method: "GET",
@@ -205,25 +178,15 @@ http.route({
     if (!id) return new Response("Missing id", { status: 400 });
 
     try {
-      // v.id can't be used directly with string, rely on query to fetch by id via system
-      // We expose an internal query via API-like shape: query by id through DB
-      // But since we don't have a direct function, emulate via system.get id parsing
-      // Simpler: add a small lookup using runQuery over getById-like function (from new module)
-      const { internal } = await import("./_generated/api");
-      // call through internal is not available for public query; rely on public shape
-      // However, we can register a public query in transcription.ts (getById) and call it here
-      const result = (await ctx.runQuery(
-        // @ts-ignore path inference
-        (await import("./_generated/api")).api.transcription.getById,
-        // @ts-ignore validator casting at runtime
-        { transcriptId: id as any }
-      )) as any;
+      const result: any = await ctx.runQuery(api.transcription.getById, {
+        transcriptId: id as any,
+      });
 
       if (!result) return new Response("Not found", { status: 404 });
 
       const lines = (Array.isArray(result.chunks) ? result.chunks : []) as Array<any>;
       const joinTxt = lines
-        .map((c) => {
+        .map((c: any) => {
           const time = new Date(c.ts).toISOString();
           const base = `[${time}] ${c.text}`;
           if (c.translated) return `${base}\n[translated] ${c.translated}`;

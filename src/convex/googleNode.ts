@@ -50,7 +50,7 @@ function parseIdTokenSub(id_token?: string | null): string | null {
 // Action: exchange OAuth code for tokens
 export const exchangeOAuthCode = internalAction({
   args: { code: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     const body = new URLSearchParams();
     body.set("code", args.code);
     body.set("client_id", process.env.GOOGLE_CLIENT_ID || "");
@@ -107,10 +107,10 @@ export const saveOAuthTokens = internalAction({
 });
 
 // Action: ensure valid access token for a user (refresh if needed)
-export const ensureAccessTokenForUser = internalAction({
+export const ensureAccessTokenForUser: any = internalAction({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const token = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: args.userId });
+    const token: any = await ctx.runQuery(internal.googleInternal.getGoogleTokenByUser, { userId: args.userId });
     if (!token) {
       return { access: "", ok: false as const };
     }

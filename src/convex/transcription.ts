@@ -50,7 +50,7 @@ export const start = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
 
-    const isTeacher = session.teacherId === me._id;
+    const isTeacher = (session as any)?.teacherId === me._id;
     const isAdmin = me.role === "admin";
     if (!isTeacher && !isAdmin) throw new Error("Only teacher or admin can start transcript");
 
@@ -138,7 +138,7 @@ export const stop = mutation({
 
     const session = await ctx.db.get(doc.sessionId);
     const isOwner = doc.createdBy === me._id;
-    const isTeacher = session?.teacherId === me._id;
+    const isTeacher = (session as any)?.teacherId === me._id;
     const isAdmin = me.role === "admin";
     if (!isOwner && !isTeacher && !isAdmin) throw new Error("Unauthorized");
 
