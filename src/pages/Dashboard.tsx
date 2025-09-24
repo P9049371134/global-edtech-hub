@@ -277,7 +277,7 @@ export default function Dashboard() {
           <TabsContent value="notes" className="space-y-6">
             <NotesTab
               notes={userNotes}
-              onViewAll={() => navigate("/notes")}
+              onViewAll={() => toast.info("You're already viewing your notes here.")}
               onSummarize={async (noteId: string) => {
                 const p = summarize({ noteId: noteId as any });
                 toast.promise(p, {
@@ -297,7 +297,7 @@ export default function Dashboard() {
               endDate={reportEnd}
               onStartChange={setReportStart}
               onEndChange={setReportEnd}
-              onGenerate={() => navigate("/reports")}
+              onGenerate={() => toast.info("Use the date filters to refine your reports here.")}
             />
           </TabsContent>
         </Tabs>
