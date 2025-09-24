@@ -126,73 +126,15 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(liveSessions ?? []).map((s: any) => {
-          const videos = listVideos ? listVideos(s._id) : undefined;
-          const meeting = listMeeting ? listMeeting(s._id) : undefined;
-          return (
-            <div key={s._id} className="border rounded-md p-4 bg-white border-green-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{s.title}</div>
-                  <div className="text-xs text-gray-500">
-                    Started {new Date(s.startTime).toLocaleTimeString()} • {s.attendeeCount} attendees
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    className="text-sm px-3 py-1 rounded-md border border-green-200 text-green-700 hover:bg-green-50"
-                    onClick={() => onJoin(s._id)}
-                  >
-                    Join
-                  </button>
-                  {meeting?.providerMeetingUrl ? (
-                    <a
-                      href={meeting.providerMeetingUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
-                    >
-                      Join Google Meet
-                    </a>
-                  ) : (
-                    <button
-                      className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
-                      onClick={() => openSchedule(s._id)}
-                    >
-                      Schedule Meet
-                    </button>
-                  )}
-                  <button
-                    className="text-sm px-3 py-1 rounded-md border border-purple-200 text-purple-700 hover:bg-purple-50"
-                    onClick={() => openAttach(s._id)}
-                  >
-                    Attach YouTube
-                  </button>
-                </div>
-              </div>
-
-              {/* Attached videos list */}
-              {(videos ?? []).length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {(videos ?? []).map((v: any) => (
-                    <div key={v._id} className="rounded-md overflow-hidden border">
-                      <div className="aspect-video w-full bg-black">
-                        <iframe
-                          className="w-full h-full"
-                          src={`https://www.youtube.com/embed/${v.videoId}`}
-                          title={v.title ?? "Lecture Video"}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                      </div>
-                      {v.title && <div className="p-2 text-sm">{v.title}</div>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {(liveSessions ?? []).map((s: any) => (
+          <SessionItem
+            key={s._id}
+            session={s}
+            onJoin={() => onJoin(s._id)}
+            onSchedule={() => openSchedule(s._id)}
+            onAttach={() => openAttach(s._id)}
+          />
+        ))}
       </div>
 
       {/* Attach YouTube Dialog */}
@@ -266,6 +208,85 @@ export function SessionsTab({ liveSessions, onJoin }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Add: Child component to safely use hooks per session card
+function SessionItem({
+  session,
+  onJoin,
+  onSchedule,
+  onAttach,
+}: {
+  session: any;
+  onJoin: () => void;
+  onSchedule: () => void;
+  onAttach: () => void;
+}) {
+  const videos = useQuery(api.videos.listForSession, { sessionId: session._id as any } as any);
+  const meeting = useQuery(api.meetings.getForSession, { sessionId: session._id as any } as any);
+
+  return (
+    <div className="border rounded-md p-4 bg-white border-green-100">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-medium">{session.title}</div>
+          <div className="text-xs text-gray-500">
+            Started {new Date(session.startTime).toLocaleTimeString()} • {session.attendeeCount} attendees
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            className="text-sm px-3 py-1 rounded-md border border-green-200 text-green-700 hover:bg-green-50"
+            onClick={onJoin}
+          >
+            Join
+          </button>
+          {meeting?.providerMeetingUrl ? (
+            <a
+              href={meeting.providerMeetingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
+            >
+              Join Google Meet
+            </a>
+          ) : (
+            <button
+              className="text-sm px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50"
+              onClick={onSchedule}
+            >
+              Schedule Meet
+            </button>
+          )}
+          <button
+            className="text-sm px-3 py-1 rounded-md border border-purple-200 text-purple-700 hover:bg-purple-50"
+            onClick={onAttach}
+          >
+            Attach YouTube
+          </button>
+        </div>
+      </div>
+
+      {(videos ?? []).length > 0 && (
+        <div className="mt-3 space-y-2">
+          {(videos ?? []).map((v: any) => (
+            <div key={v._id} className="rounded-md overflow-hidden border">
+              <div className="aspect-video w-full bg-black">
+                <iframe
+                  className="w-full h-full"
+                  src={`https://www.youtube.com/embed/${v.videoId}`}
+                  title={v.title ?? "Lecture Video"}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              {v.title && <div className="p-2 text-sm">{v.title}</div>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

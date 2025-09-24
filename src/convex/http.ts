@@ -1,5 +1,5 @@
+// Add Node runtime so we can use node:crypto and external fetches
 "use node";
-
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -7,7 +7,7 @@ import { internal } from "./_generated/api";
 const http = httpRouter();
 
 // Crypto helpers (AES-256-GCM)
-import crypto from "crypto";
+import * as crypto from "node:crypto";
 
 // Helpers: encryption using TOKEN_ENCRYPTION_KEY (hex expected, 32 bytes)
 function getKey(): Buffer {

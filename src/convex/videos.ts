@@ -37,6 +37,23 @@ export const listForSession = query({
   },
 });
 
+// Add: list videos for many sessions in one call to avoid multiple hooks on the client
+export const listForSessions = query({
+  args: { sessionIds: v.array(v.id("sessions")) },
+  handler: async (ctx, args) => {
+    const map: Record<string, any[]> = {};
+    for (const id of args.sessionIds) {
+      const rows = await ctx.db
+        .query("videos")
+        .withIndex("by_session", (q) => q.eq("sessionId", id))
+        .order("desc")
+        .collect();
+      map[id as any] = rows;
+    }
+    return map;
+  },
+});
+
 // Attach a YouTube video to a session (teacher or admin only)
 export const addToSession = mutation({
   args: {

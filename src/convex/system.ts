@@ -1,5 +1,5 @@
 import { query } from "./_generated/server";
-import { v } from "convex/values";
+/* removed unused import */
 
 export const getStatus = query({
   args: {},
@@ -22,13 +22,12 @@ export const getStatus = query({
 
     // New: check stored token existence
     let googleConnected = false;
-    // Safe query: take(1) to avoid scans
-    const anyGoogleToken = await ctx.db
+    // Check the most recent token (descending) to infer connectivity without invalid index usage
+    const latestToken = await ctx.db
       .query("tokens")
-      .withIndex("by_user_and_provider", (q) => q) // cannot filter user here without id; we'll just look for any row by scanning minimal
+      .order("desc")
       .take(1);
-    // Filter client-side for provider === "google" from the 1 taken (cheap op)
-    googleConnected = anyGoogleToken.some((t: any) => t.provider === "google");
+    googleConnected = latestToken.some((t: any) => t.provider === "google");
 
     return {
       openrouter: hasOpenRouter,
